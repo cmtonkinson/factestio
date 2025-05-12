@@ -1,19 +1,41 @@
 local serpent = require("serpent")
 local Node = require("src.node")
-local F = {}
 
-F.registry       = {}
-F.DEBUG          = true
-F.PATH           = ""
-F.ROOT           = "/Users/chris/repo/factestio/factestio"
-F.BASE           = F.ROOT .. "/base.zip_"
-F.SETTINGS       = F.ROOT .. "/server-settings.json"
-F.SAVES          = F.ROOT .. "/saves"
-F.TEST_NAME_FILE = F.ROOT .. "/test_name.txt"
+-------------------------------------------------------------------------------
+local F                = {}
+F.registry             = {}
+F.DEBUG                = true
+F.FACTORIO_BINARY      = nil
+F.FACTORIO_DATA_PATH   = nil
+F.PROJECT_PATH         = nil
+F.DONE_FILE            = nil
+F.ROOT                 = nil
+F.SETTINGS             = nil
+F.SAVES                = nil
+F.TEST_NAME_FILE       = nil
+
+-------------------------------------------------------------------------------
+function F.init()
+  F.DONE_FILE            = F.FACTORIO_DATA_PATH .. "/script-output/factestio.done"
+  F.ROOT                 = "/Users/chris/repo/factestio/factestio"
+  F.SETTINGS             = F.ROOT .. "/server-settings.json"
+  F.SAVES                = F.ROOT .. "/saves"
+  F.TEST_NAME_FILE       = F.FACTORIO_DATA_PATH .. "/script-output/test_name.txt"
+end
 
 -----------------------------------------------------------------------------
-function F.set_path(new_path)
-  F.PATH = new_path
+function F.set_factorio_binary(new_path)
+  F.FACTORIO_BINARY = new_path
+end
+
+-----------------------------------------------------------------------------
+function F.set_factorio_data_path(new_path)
+  F.FACTORIO_DATA_PATH = new_path
+end
+
+-----------------------------------------------------------------------------
+function F.set_project_path(new_path)
+  F.PROJECT_PATH = new_path
 end
 
 -----------------------------------------------------------------------------
@@ -90,7 +112,17 @@ end
 function F.cmd(string, ...)
   local cmd = string.format(string, ...)
   if F.DEBUG then print("Executing command: \27[33m" .. cmd .. '\27[0m') end
-  os.execute(cmd)
+  return os.execute(cmd)
+end
+
+-----------------------------------------------------------------------------
+function F.cmd_capture(string, ...)
+  local cmd = string.format(string, ...)
+  if F.DEBUG then print("Capturing command: \27[33m" .. cmd .. '\27[0m') end
+  local handle = io.popen(cmd)
+  local result = handle:read("*a")
+  handle:close()
+  return result
 end
 
 -----------------------------------------------------------------------------
@@ -128,16 +160,38 @@ function F.start_factorio(node, depth)
   -- Create the test name file.
   F.cmd('echo "%s" > "%s"', node.name, F.TEST_NAME_FILE)
 
-  -- Start factorio with the new save file.
-  F.cmd('%s --start-server-load-scenario "%s" --server-settings "%s" --mod-directory "%s" --disable-audio --nogamepad'
-    , F.PATH
-    , 'factestio/factestio'
---   ,  F.save_name(node)
+  -- Start the headless scenario in the background.
+  F.cmd('%s --start-server-load-scenario factestio/factestio --server-settings "%s" --mod-directory "%s" --disable-audio --nogamepad 2>&1 &'
+    , F.FACTORIO_BINARY
     , F.SETTINGS
-    , '/Users/chris/repo/factestio'
+    , F.PROJECT_PATH
   )
 
-  -- Clean up the test name file.
+  -- The scenario will write to script-outputs/factestio.done when it's finished.
+  -- Busywait for that.
+  local done = false
+  while not done do
+    local f = io.open(F.DONE_FILE, "r")
+    if f then
+      done = true
+      f:close()
+    else
+      os.execute("sleep 0.25")
+    end
+  end
+
+  -- Now that the scenario is done, we have to find the Factorio PID and
+  -- kill the process manually.
+  local grep = F.cmd_capture('ps aux | grep "start-server-load-scenario factestio/factestio" | grep -v grep')
+  local pid = grep:match("(%d+)")
+  if pid then
+    F.cmd('kill -9 %s', pid)
+  else
+    print("Error: No PID found for Factorio process.")
+  end
+
+  -- Clean up transient files.
+  F.cmd('rm "%s"', F.DONE_FILE)
   F.cmd('rm "%s"', F.TEST_NAME_FILE)
 end
 

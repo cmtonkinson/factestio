@@ -1,7 +1,11 @@
 local e = require("example")
 local f = require("src.factestio")
 
-f.set_path("/Applications/factorio.app/Contents/MacOS/factorio")
+f.set_factorio_binary("/Applications/factorio.app/Contents/MacOS/factorio")
+f.set_factorio_data_path("/Users/chris/Library/Application Support/factorio/")
+f.set_project_path("/Users/chris/repo/factestio")
+f.init()
+
 local roots = f.compile()
 f.run(roots)
 
