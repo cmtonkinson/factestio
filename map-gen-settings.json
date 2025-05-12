@@ -1,0 +1,18 @@
+{
+  "width": 128,
+  "height": 128,
+  "starting_area": "none",
+  "peaceful_mode": true,
+  "autoplace_controls": {
+    "coal": { "frequency": 0, "size": 0, "richness": 0 },
+    "stone": { "frequency": 0, "size": 0, "richness": 0 },
+    "copper-ore": { "frequency": 0, "size": 0, "richness": 0 },
+    "iron-ore": { "frequency": 0, "size": 0, "richness": 0 },
+    "uranium-ore": { "frequency": 0, "size": 0, "richness": 0 },
+    "crude-oil": { "frequency": 0, "size": 0, "richness": 0 },
+    "trees": { "frequency": 0, "size": 0, "richness": 0 },
+    "enemy-base": { "frequency": 0, "size": 0, "richness": 0 }
+  },
+  "terrain_segmentation": "very-low",
+  "water": "none"
+}
