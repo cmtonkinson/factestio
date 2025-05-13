@@ -1,5 +1,5 @@
 local e = require("example")
-local f = require("src.factestio")
+local f = require("scenarios.factestio.src.factestio")
 
 f.set_factorio_binary("/Applications/factorio.app/Contents/MacOS/factorio")
 f.set_factorio_data_path("/Users/chris/Library/Application Support/factorio/")

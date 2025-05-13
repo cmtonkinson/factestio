@@ -1,4 +1,4 @@
-local f = require("src.factestio")
+local f = require("scenarios.factestio.src.factestio")
 
 
 f.test("copy-assembler", {
