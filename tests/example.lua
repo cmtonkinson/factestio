@@ -28,6 +28,6 @@ return {
       else
         game.print("Failed to find entities.")
       end
-    end,
+  end,
   },
 }

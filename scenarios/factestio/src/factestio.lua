@@ -45,7 +45,7 @@ function F.init()
   F.ROOT           = "/Users/chris/repo/factestio"
   F.SETTINGS       = F.ROOT .. "/server-settings.json"
   F.SAVES          = F.ROOT .. "/saves"
-  F.TEST_NAME_FILE = F.FACTORIO_DATA_PATH .. "/script-output/test_name.txt"
+  F.TEST_NAME_FILE = F.ROOT .. "/scenarios/factestio/test_name.lua"
   F.BASE           = F.ROOT .. "/base.zip_"
 end
 
@@ -190,16 +190,24 @@ function F.exec(node, depth)
 end
 
 -----------------------------------------------------------------------------
+function F.get_current_test_name()
+  local f = io.open(F.TEST_NAME_FILE, "r")
+  if f then
+    local name = f:read("*a")
+    f:close()
+    return name
+  else
+    return nil
+  end
+end
+
+-----------------------------------------------------------------------------
 function F.start_factorio(node, depth)
-  local test_name_file = 'scenarios/factestio/test_name.lua'
   local d = depth or 0
   local indent = string.rep(" ", d * 2)
   print(indent .. "..starting factorio for scenario: " .. node.name)
 
-  local content = "return '" .. node.name .. "'"
-  local file = assert(io.open(test_name_file, 'w'))
-  file:write(content)
-  file:close()
+  F.cmd('echo return \'"%s"\' > "%s"', node.name, F.TEST_NAME_FILE)
 
   -- Start the headless scenario in the background.
   local output = '>/dev/null 2>&1'
@@ -210,9 +218,9 @@ function F.start_factorio(node, depth)
     , output
   )
 
-  -- The scenario will write to script-outputs/factestio.done when it's finished.
-  -- Busywait for that. But also we need to be wary of a scenario that may hang,
-  -- so we add a timeout component to the check as well.
+  -- The scenario will write to TEST_TIMEOUT when it's finished. Busywait
+  -- for that. But also we need to be wary of a scenario that may hang, so
+  -- we add a timeout component to the check as well.
   local done = false
   local timeout = os.time() + F.TEST_TIMEOUT
   while not done and os.time() < timeout do
@@ -242,27 +250,16 @@ function F.start_factorio(node, depth)
   end
 
   -- Anything we want to save from the test run needs to get put into the appropriate results subdirectory.
-  local results_dir = 'results'
   local fqn = F.fully_qualified_name(node)
-  F.cmd('mkdir -p "%s"', results_dir .. "/" .. fqn)
-  F.cmd('mv "%s" "%s"', F.FACTORIO_DATA_PATH .. "/saves/factestio-" .. fqn .. ".zip", results_dir .. "/" .. fqn .. "/" .. fqn .. ".zip")
+  local results_dir = 'results/' .. fqn .. '/'
+  local save = F.FACTORIO_DATA_PATH .. '/saves/factestio-' .. fqn .. '.zip'
+  F.cmd('mkdir -p "%s"', results_dir)
+  F.cmd('mv "%s" "%s"', save, results_dir .. node.name .. ".zip")
 
   -- Clean up transient files.
   F.cmd('rm "%s"', 'scenarios/factestio/map.dat')
-  F.cmd('rm "%s"', test_name_file)
+  F.cmd('rm "%s"', F.TEST_NAME_FILE)
   F.cmd('rm "%s"', F.DONE_FILE)
-end
-
------------------------------------------------------------------------------
-function F.get_current_test_name()
-  local f = io.open(F.TEST_NAME_FILE, "r")
-  if f then
-    local name = f:read("*a")
-    f:close()
-    return name
-  else
-    return nil
-  end
 end
 
 
