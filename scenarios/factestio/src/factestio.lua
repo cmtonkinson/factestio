@@ -41,12 +41,15 @@ F.SAVES                = ''
 
 -------------------------------------------------------------------------------
 function F.init()
-  F.DONE_FILE      = F.FACTORIO_DATA_PATH .. "/script-output/factestio.done"
-  F.ROOT           = "/Users/chris/repo/factestio"
-  F.SETTINGS       = F.ROOT .. "/server-settings.json"
-  F.SAVES          = F.ROOT .. "/saves"
-  F.TEST_NAME_FILE = F.ROOT .. "/scenarios/factestio/test_name.lua"
-  F.BASE           = F.ROOT .. "/base.zip_"
+  F.ROOT           = '/Users/chris/repo/factestio/'
+  F.SCRIPT_OUTPUT  = F.FACTORIO_DATA_PATH .. 'script-output/'
+  F.SETTINGS       = F.ROOT .. 'server-settings.json'
+  F.SAVES          = F.ROOT .. 'saves'
+  F.TEST_NAME_FILE = F.ROOT .. 'scenarios/factestio/test_name.lua'
+  F.BASE           = F.ROOT .. 'base.zip_'
+  F.DONE_FILE      = F.SCRIPT_OUTPUT .. 'factestio.done'
+  F.TEST_STDOUT    = F.SCRIPT_OUTPUT .. 'factestio.stdout'
+  F.TEST_STDERR    = F.SCRIPT_OUTPUT .. 'factestio.stderr'
 end
 
 -----------------------------------------------------------------------------
@@ -125,6 +128,7 @@ function F.compile()
 
   -- First pass: Generate nodes for all scenarios.
   for name, details in pairs(F.registry) do
+    details.name = name
     nodes[name] = Node.new(name, details)
   end
 
@@ -180,7 +184,7 @@ function F.exec(node, depth)
   local indent = string.rep(" ", d * 2)
   print(indent .. "running scenario: " .. node.name)
 
-  -- Overwrite the scenario map.daa
+  -- Overwrite the scenario map.dat
   F.cmd('cp "%s" "%s"', F.starting_save(node), 'scenarios/factestio/map.dat')
 
   F.start_factorio(node, d)
@@ -210,12 +214,18 @@ function F.start_factorio(node, depth)
   F.cmd('echo return \'"%s"\' > "%s"', node.name, F.TEST_NAME_FILE)
 
   -- Start the headless scenario in the background.
-  local output = '>/dev/null 2>&1'
-  if F.DEBUG then output = '' end
-  F.cmd('%s --start-server-load-scenario factestio/factestio --server-settings "%s" --disable-audio --nogamepad %s &'
+  local redirect = ''
+  F.cmd('> "%s"', F.TEST_STDOUT)
+  F.cmd('> "%s"', F.TEST_STDERR)
+  if F.DEBUG then
+    redirect = string.format('> >(tee "%s") 2> >(tee "%s" >&2)', F.TEST_STDOUT, F.TEST_STDERR)
+  else
+    redirect = string.format('>"%s" 2>"%s"', F.TEST_STDOUT, F.TEST_STDERR)
+  end
+  F.cmd('/bin/bash -c \'%s --start-server-load-scenario factestio/factestio --server-settings "%s" --disable-audio --nogamepad %s &\''
     , F.FACTORIO_BINARY
     , F.SETTINGS
-    , output
+    , redirect
   )
 
   -- The scenario will write to TEST_TIMEOUT when it's finished. Busywait
@@ -252,14 +262,76 @@ function F.start_factorio(node, depth)
   -- Anything we want to save from the test run needs to get put into the appropriate results subdirectory.
   local fqn = F.fully_qualified_name(node)
   local results_dir = 'results/' .. fqn .. '/'
-  local save = F.FACTORIO_DATA_PATH .. '/saves/factestio-' .. fqn .. '.zip'
+  local save = F.FACTORIO_DATA_PATH .. 'saves/factestio-' .. node.name .. '.zip'
   F.cmd('mkdir -p "%s"', results_dir)
-  F.cmd('mv "%s" "%s"', save, results_dir .. node.name .. ".zip")
+  F.cmd('mv "%s" "%s"', save, results_dir .. 'factestio-' .. node.name .. ".zip")
+  F.cmd('mv "%s" "%s"', F.TEST_STDOUT, results_dir .. 'stdout.txt')
+  F.cmd('mv "%s" "%s"', F.TEST_STDERR, results_dir .. 'stderr.txt')
+  F.cmd('mv "%s" "%s"', F.SCRIPT_OUTPUT .. F.results_file(node), results_dir .. 'results.json')
 
   -- Clean up transient files.
   F.cmd('rm "%s"', 'scenarios/factestio/map.dat')
   F.cmd('rm "%s"', F.TEST_NAME_FILE)
   F.cmd('rm "%s"', F.DONE_FILE)
+end
+
+-----------------------------------------------------------------------------
+function F.invoke(self, node, helpers, game, player, event)
+  -- We bundle a bunch of stuff into a single table so that it's easy to pass
+  -- parameters down, and get metadata back up.
+  self.context = {
+    -- Parameters we're passing through.
+    event        = event,
+    game         = game,
+    player       = player,
+    -- Metadata and status we expect to get back.
+    assertions   = 0,
+    elapsed_time = 0,
+    error        = '',
+    status       = 'unknown',
+  }
+
+  -- We lump the before/test/after functions together in an isolated function
+  -- so that we can pcall THAT. This lets us fail the whole thing immediately
+  -- if anything raises an error.
+  local ok, err = pcall(F.execute_test, self, node)
+  if not ok then self.context.error = err end
+
+  -- Save the results.
+  local json = helpers.table_to_json({
+    assertions   = self.context.assertions,
+    error        = self.context.error,
+    status       = self.context.status,
+  })
+  helpers.write_file(F.results_file(node), json)
+end
+
+-----------------------------------------------------------------------------
+function F.results_file(node)
+  return 'factestio-' .. node.name .. '-results.json'
+end
+
+-----------------------------------------------------------------------------
+function F.execute_test(self, node)
+  if node.before then node.before(self, self.context) end
+  node.test(self, self.context)
+  if node.after then node.after(self, self.context) end
+end
+
+-----------------------------------------------------------------------------
+function F.expect(self, actual, expected)
+  local context = self.context
+  local result = actual == expected
+
+  context.assertions = context.assertions + 1
+
+  if actual == expected then
+    context.status = 'pass'
+    return true
+  else
+    context.status = 'fail'
+    error(string.format("Expected '%s' but got '%s'", expected, actual))
+  end
 end
 
 

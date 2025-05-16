@@ -1,6 +1,7 @@
 return {
   setup = {
-    test = function(game, player, event)
+    test = function(f, context)
+      local game = context.game
       local surface = game.surfaces[1]
 
       local assembler = surface.create_entity({
@@ -12,12 +13,15 @@ return {
         name = "fast-inserter",
         position = {x = 6, y = 6},
       })
+
+      f:expect(1, 1)
     end,
   },
 
   secondary = {
     from = 'setup',
-    test = function(game, player, event)
+    test = function(f, context)
+      local game = context.game
       local surface = game.surfaces[1]
 
       local assembler = surface.find_entity("assembling-machine-2", {x = 1, y = 1})
@@ -28,6 +32,9 @@ return {
       else
         game.print("Failed to find entities.")
       end
+
+      f:expect(2, 2)
+      f:expect(3, 3)
   end,
   },
 }
