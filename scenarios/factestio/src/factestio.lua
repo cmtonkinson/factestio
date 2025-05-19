@@ -17,10 +17,17 @@
 
 -- Node will be in a differrent relative location depending on context.
 local Node = nil
+local io = nil
+local json = nil
+local serpent = nil
+
 if _G.script ~= nil then
   Node = require("src.node")
 else
   Node = require("scenarios.factestio.src.node")
+  io = require("io")
+  json = require("cjson")
+  serpent = require("serpent")
 end
 
 -------------------------------------------------------------------------------
@@ -28,7 +35,7 @@ end
 local F                = {}
 -- These are initialized statically.
 F.registry             = {}
-F.DEBUG                = true
+F.DEBUG                = false
 F.TEST_TIMEOUT         = 5
 -- These will be set at runtime.
 F.FACTORIO_BINARY      = ''
@@ -91,9 +98,7 @@ F.test = F.register_scenario -- alias
 
 -----------------------------------------------------------------------------
 function F.register_scenarios(table)
-  print('registering scenarios...')
   for name, config in pairs(table) do
-    if F.DEBUG then print("registering " .. name) end
     F.register_scenario(name, config)
   end
 end
@@ -138,8 +143,10 @@ function F.compile()
     if details.from then
       local parent = nodes[details.from]
       assert(parent, "Parent scenario '" .. details.from .. "' not found for '" .. name .. "'")
+      node.root = false
       parent:add(node)
     else
+      node.root = true
       table.insert(roots, node)
     end
   end
@@ -150,14 +157,14 @@ end
 -----------------------------------------------------------------------------
 function F.cmd(string, ...)
   local cmd = string.format(string, ...)
-  if F.DEBUG then print("Executing command: \27[33m" .. cmd .. '\27[0m') end
+  if F.DEBUG then F.yellow(cmd) end
   return os.execute(cmd)
 end
 
 -----------------------------------------------------------------------------
 function F.cmd_capture(string, ...)
   local cmd = string.format(string, ...)
-  if F.DEBUG then print("Capturing command: \27[33m" .. cmd .. '\27[0m') end
+  if F.DEBUG then F.yellow(cmd) end
   local handle = io.popen(cmd)
   local result = handle:read("*a")
   handle:close()
@@ -167,14 +174,12 @@ end
 -----------------------------------------------------------------------------
 function F.run(roots)
   local results_dir = 'results'
-
   -- Clean up results from the last run.
   F.cmd('rm -rf "%s"', results_dir)
   F.cmd('mkdir -p "%s"', results_dir)
-
   -- Kick off the root scenarios.
   for _, root in pairs(roots) do
-    F.exec(root)
+    F.exec(root, 0)
   end
 end
 
@@ -182,12 +187,27 @@ end
 function F.exec(node, depth)
   local d = depth or 0
   local indent = string.rep(" ", d * 2)
-  print(indent .. "running scenario: " .. node.name)
 
   -- Overwrite the scenario map.dat
   F.cmd('cp "%s" "%s"', F.starting_save(node), 'scenarios/factestio/map.dat')
 
+  -- Do the thing.
   F.start_factorio(node, d)
+
+  -- Check the results of the test.
+  local file = io.open(node.results_file, "r")
+  if not file then error("Error: Could not open results file " .. node.results_file) end
+  local content = file:read("*a")
+  if not content then error("Error: Could not read results file " .. node.results_file) end
+  file:close()
+  node.context = json.decode(content)
+  if node.context and node.context.status == "pass" then
+    F.green(string.format("%s%s (%d assertions)", indent, node.name, node.context.assertions))
+  else
+    F.red(string.format("%s%s (failed: %s)", indent, node.name, node.context.error))
+  end
+
+  -- Recursively call the children.
   for _, child in pairs(node.children) do
     F.exec(child, d + 1)
   end
@@ -209,26 +229,31 @@ end
 function F.start_factorio(node, depth)
   local d = depth or 0
   local indent = string.rep(" ", d * 2)
-  print(indent .. "..starting factorio for scenario: " .. node.name)
 
+  -- The way we pass the test name into the scenario is by writing it to a
+  -- Lua file which just returns the string.
   F.cmd('echo return \'"%s"\' > "%s"', node.name, F.TEST_NAME_FILE)
 
-  -- Start the headless scenario in the background.
+  -- Start the headless scenario in the background. Lot of BS going on here
+  -- to redirect output to the right places and set the correct paths.
   local redirect = ''
   F.cmd('> "%s"', F.TEST_STDOUT)
   F.cmd('> "%s"', F.TEST_STDERR)
   if F.DEBUG then
+    -- Send stdout and stderr both to the CLI and to log files.
     redirect = string.format('> >(tee "%s") 2> >(tee "%s" >&2)', F.TEST_STDOUT, F.TEST_STDERR)
   else
+    -- Send stdout and stderr to log files only.
     redirect = string.format('>"%s" 2>"%s"', F.TEST_STDOUT, F.TEST_STDERR)
   end
+  -- Do the thing.
   F.cmd('/bin/bash -c \'%s --start-server-load-scenario factestio/factestio --server-settings "%s" --disable-audio --nogamepad %s &\''
     , F.FACTORIO_BINARY
     , F.SETTINGS
     , redirect
   )
 
-  -- The scenario will write to TEST_TIMEOUT when it's finished. Busywait
+  -- The scenario will write to DONE_FILE when it's finished. Busywait
   -- for that. But also we need to be wary of a scenario that may hang, so
   -- we add a timeout component to the check as well.
   local done = false
@@ -246,7 +271,7 @@ function F.start_factorio(node, depth)
   -- This could theoretically fire a false positive, but the probability is small
   -- and I don't care that much.
   if os.time() > timeout then
-    print(indent .. "Error: Timeout waiting for scenario to finish.")
+    F.red(indent .. "Error: Timeout waiting for scenario to finish.")
   end
 
   -- Now that the scenario is done, we have to find the Factorio PID and
@@ -256,7 +281,7 @@ function F.start_factorio(node, depth)
   if pid then
     F.cmd('kill -9 %s', pid)
   else
-    print("Error: No PID found for Factorio process.")
+    F.red("Error: No PID found for Factorio process.")
   end
 
   -- Anything we want to save from the test run needs to get put into the appropriate results subdirectory.
@@ -267,12 +292,13 @@ function F.start_factorio(node, depth)
   F.cmd('mv "%s" "%s"', save, results_dir .. 'factestio-' .. node.name .. ".zip")
   F.cmd('mv "%s" "%s"', F.TEST_STDOUT, results_dir .. 'stdout.txt')
   F.cmd('mv "%s" "%s"', F.TEST_STDERR, results_dir .. 'stderr.txt')
-  F.cmd('mv "%s" "%s"', F.SCRIPT_OUTPUT .. F.results_file(node), results_dir .. 'results.json')
+  node.results_file = results_dir .. 'results.json'
+  F.cmd('mv "%s" "%s"', F.SCRIPT_OUTPUT .. F.results_file(node), node.results_file)
 
   -- Clean up transient files.
-  F.cmd('rm "%s"', 'scenarios/factestio/map.dat')
+  F.cmd('rm -f "%s"', 'scenarios/factestio/map.dat')
   F.cmd('rm "%s"', F.TEST_NAME_FILE)
-  F.cmd('rm "%s"', F.DONE_FILE)
+  F.cmd('rm -f "%s"', F.DONE_FILE)
 end
 
 -----------------------------------------------------------------------------
@@ -325,13 +351,32 @@ function F.expect(self, actual, expected)
 
   context.assertions = context.assertions + 1
 
-  if actual == expected then
+  if result then
     context.status = 'pass'
     return true
   else
     context.status = 'fail'
-    error(string.format("Expected '%s' but got '%s'", expected, actual))
+    local output = string.format("Expected '%s' but got '%s'", expected, actual)
+    F.red(output)
+    error(output)
   end
+end
+
+-----------------------------------------------------------------------------
+function F.yellow(string, ...)
+  if F.DEBUG then
+    print("\27[0;33m" .. string .. "\27[0m", ...)
+  end
+end
+
+-----------------------------------------------------------------------------
+function F.red(string, ...)
+  print("\27[1;31m" .. string .. "\27[0m", ...)
+end
+
+-----------------------------------------------------------------------------
+function F.green(string, ...)
+  print("\27[1;32m" .. string .. "\27[0m", ...)
 end
 
 

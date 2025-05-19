@@ -10,4 +10,3 @@ f.register_scenarios(e)
 
 local roots = f.compile()
 f.run(roots)
-
