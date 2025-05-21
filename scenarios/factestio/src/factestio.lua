@@ -114,7 +114,7 @@ end
 
 -----------------------------------------------------------------------------
 function F.save_name(node)
-  return "results/" .. F.fully_qualified_name(node) .. "/map.dat"
+  return "results/" .. F.fully_qualified_name(node) .. "/factestio-" .. node.name .. ".zip"
 end
 
 -----------------------------------------------------------------------------
