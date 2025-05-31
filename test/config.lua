@@ -1,9 +1,9 @@
 return {
-  config = {
+  os_paths = {
     binary = '/Applications/factorio.app/Contents/MacOS/factorio',
     data = '/Users/chris/Library/Application Support/factorio',
   },
-  tests = {
+  test_files = {
     'example',
   }
 }

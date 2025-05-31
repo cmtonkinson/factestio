@@ -94,8 +94,8 @@ F.test = F.register_scenario -- alias
 -----------------------------------------------------------------------------
 function F.load()
   local configuration = require('test.config')
-  F.config(configuration.config)
-  for _, name in ipairs(configuration.tests) do
+  F.config(configuration.os_paths)
+  for _, name in ipairs(configuration.test_files) do
     local scenarios_tbl = require('test.' .. name)
     for name, config in pairs(scenarios_tbl) do
       F.register_scenario(name, config)
