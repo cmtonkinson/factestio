@@ -3,12 +3,11 @@ local this_test = nil
 
 -- Setup (but only if we're running as a proper scenario)
 if _G.script ~= nil then
-  f = require("src.factestio")
+  f = require('src.lib')
   this_test = require('test_name')
 
-  t = require('tests/example')
   f.init()
-  f.register_scenarios(t)
+  f.load()
   f.compile()
 end
 

@@ -22,12 +22,12 @@ local json = nil
 local serpent = nil
 
 if _G.script ~= nil then
-  Node = require("src.node")
+  Node = require('src.node')
 else
-  Node = require("scenarios.factestio.src.node")
-  io = require("io")
-  json = require("cjson")
-  serpent = require("serpent")
+  Node = require('scenarios.factestio.src.node')
+  io = require('io')
+  json = require('cjson')
+  serpent = require('serpent')
 end
 
 -------------------------------------------------------------------------------
@@ -40,7 +40,6 @@ F.TEST_TIMEOUT         = 5
 -- These will be set at runtime.
 F.FACTORIO_BINARY      = ''
 F.FACTORIO_DATA_PATH   = ''
-F.PROJECT_PATH         = ''
 F.DONE_FILE            = ''
 F.ROOT                 = ''
 F.SETTINGS             = ''
@@ -53,25 +52,21 @@ function F.init()
   F.SETTINGS       = F.ROOT .. 'server-settings.json'
   F.SAVES          = F.ROOT .. 'saves'
   F.TEST_NAME_FILE = F.ROOT .. 'scenarios/factestio/test_name.lua'
-  F.BASE           = F.ROOT .. 'base.zip_'
   F.DONE_FILE      = F.SCRIPT_OUTPUT .. 'factestio.done'
   F.TEST_STDOUT    = F.SCRIPT_OUTPUT .. 'factestio.stdout'
   F.TEST_STDERR    = F.SCRIPT_OUTPUT .. 'factestio.stderr'
 end
 
 -----------------------------------------------------------------------------
-function F.set_factorio_binary(new_path)
-  F.FACTORIO_BINARY = new_path
-end
-
------------------------------------------------------------------------------
-function F.set_factorio_data_path(new_path)
-  F.FACTORIO_DATA_PATH = new_path
-end
-
------------------------------------------------------------------------------
-function F.set_project_path(new_path)
-  F.PROJECT_PATH = new_path
+function F.config(cfg)
+  assert(type(cfg) == "table", "Factestio.config: cfg must be a table")
+  if cfg.binary then
+    F.FACTORIO_BINARY = cfg.binary
+  end
+  if cfg.data then
+    F.FACTORIO_DATA_PATH = cfg.data .. '/'
+  end
+  F.init()
 end
 
 -----------------------------------------------------------------------------
@@ -97,9 +92,14 @@ end
 F.test = F.register_scenario -- alias
 
 -----------------------------------------------------------------------------
-function F.register_scenarios(table)
-  for name, config in pairs(table) do
-    F.register_scenario(name, config)
+function F.load()
+  local main_data = require('test.main')
+  F.config(main_data.config)
+  for _, name in ipairs(main_data.tests) do
+    local scenarios_tbl = require('test.' .. name)
+    for name, config in pairs(scenarios_tbl) do
+      F.register_scenario(name, config)
+    end
   end
 end
 
@@ -114,7 +114,7 @@ end
 
 -----------------------------------------------------------------------------
 function F.save_name(node)
-  return "results/" .. F.fully_qualified_name(node) .. "/factestio-" .. node.name .. ".zip"
+  return 'results/' .. F.fully_qualified_name(node) .. '/factestio-' .. node.name .. '.zip'
 end
 
 -----------------------------------------------------------------------------
