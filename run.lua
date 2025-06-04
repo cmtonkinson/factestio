@@ -1,9 +1,12 @@
 #!/usr/bin/env lua
 
-local argparse = require('argparse')
-local f = require('scenarios.factestio.src.lib')
+local F = require('scenarios.factestio.src.lib')
 
--- Process CLI arguments.
+local argparse = require('argparse')
+local os       = require('os')
+
+-----------------------------------------------------------------------------
+-- Process CLI arguments and flags.
 local parser = argparse()
   :name('run')
   :description('Run the Factestio Behvaior DAG')
@@ -16,10 +19,17 @@ parser:option('-t --timeout')
   :convert(tonumber)
 
 local args = parser:parse()
-f.DEBUG = args.debug
-f.TIMEOUT = args.timeout
+F.DEBUG = args.debug
+F.TIMEOUT = args.timeout
 
+-----------------------------------------------------------------------------
 -- Load the configured DAG and run the root scenarios.
-f.load()
-local roots = f.compile()
-f.run(roots)
+F.load()
+local roots = F.compile()
+F.run(roots)
+
+if F.had_failures then
+  os.exit(1)
+else
+  os.exit(0)
+end

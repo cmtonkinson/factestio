@@ -33,20 +33,20 @@ end
 
 -----------------------------------------------------------------------------
 function F.execute_test(self)
-  local node = self.context.node
+  local data = self.context.node.data
 
   -- Yes, passing both `self` and `self.context` is technically redundant.
   -- Sue me.
-  if node.before then node.before(self, self.context) end
-  node.test(self, self.context)
-  if node.after then node.after(self, self.context) end
+  if data.before then data.before(self, self.context) end
+  data.test(self, self.context)
+  if data.after then data.after(self, self.context) end
 end
 
 -----------------------------------------------------------------------------
 function F.expect(self, actual, expected)
   local context = self.context
-  local node = context.node
-  local stats = node.data.stats
+  local data = context.node.data
+  local stats = data.stats
   local result = actual == expected
 
   stats.assertions = stats.assertions + 1
@@ -56,11 +56,12 @@ function F.expect(self, actual, expected)
     return true
   else
     stats.failed = stats.failed + 1
-    node.data.status = 'fail'
+    data.status = 'fail'
     local output = string.format("Expected '%s' but got '%s'", expected, actual)
     F.red(output)
     error(output)
   end
 end
+
 return F
 end

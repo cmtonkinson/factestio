@@ -4,7 +4,12 @@ return function(F)
 -- and OS calls we want
 local io      = require('io')
 local json    = require('cjson')
+local os      = require('os')
 local serpent = require('serpent')
+
+F.start_time   = 0
+F.end_time     = 0
+F.had_failures = false
 
 -----------------------------------------------------------------------------
 function F.run(roots)
@@ -13,9 +18,11 @@ function F.run(roots)
   F.cmd('rm -rf "%s"', results_dir)
   F.cmd('mkdir -p "%s"', results_dir)
   -- Kick off the root scenarios.
+  F.start_time = os.time()
   for _, root in pairs(roots) do
     F.exec(root, 0)
   end
+  F.end_time = os.time()
   F.report_results(roots)
 end
 
@@ -49,6 +56,7 @@ function F.exec(node, depth)
   if node.data and node.data.status == "pass" then
     F.green(string.format("%s%s (%d assertions)", indent, node.name, node.data.stats.assertions))
   else
+    F.had_failures = true
     F.red(string.format("%s%s (failed: %s)", indent, node.name, node.data.error))
   end
 
@@ -165,22 +173,22 @@ function F.report_results(roots)
     results = F.add_stats(results, root_results)
   end
 
-  print(string.format("\n\n\tTotal Assertions: %d\n\tPassed: %d\n\tFailed: %d", results.assertions, results.passed, results.failed))
+  print(string.format(
+    "\n\nPassed: %d\nFailed: %d\n\n%d total assertions took %d seconds."
+    , results.passed
+    , results.failed
+    , results.assertions
+    , (F.end_time - F.start_time)
+  ))
 end
 
 -----------------------------------------------------------------------------
 function F.collect_stats(node)
-  local stats = {
-    assertions = node.stats and node.stats.assertions or 0,
-    passed = node.stats and node.stats.passed or 0,
-    failed = node.stats and node.stats.failed or 0,
-  }
-
+  local stats = node.data.stats
   for _, child in pairs(node.children) do
     local child_stats = F.collect_stats(child)
     stats = F.add_stats(stats, child_stats)
   end
-
   return stats
 end
 

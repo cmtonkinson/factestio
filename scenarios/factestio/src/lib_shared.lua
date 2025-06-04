@@ -49,22 +49,22 @@ end
 
 -----------------------------------------------------------------------------
 function F.fully_qualified_name(node)
-  local fqn = node.name
-  if node.parent then
-    fqn = F.fully_qualified_name(node.parent) .. "." .. fqn
+  local fqn = node.data.name
+  if node.data.parent then
+    fqn = F.fully_qualified_name(node.data.parent) .. "." .. fqn
   end
   return fqn
 end
 
 -----------------------------------------------------------------------------
 function F.save_name(node)
-  return 'results/' .. F.fully_qualified_name(node) .. '/factestio-' .. node.name .. '.zip'
+  return 'results/' .. F.fully_qualified_name(node) .. '/factestio-' .. node.data.name .. '.zip'
 end
 
 -----------------------------------------------------------------------------
 function F.starting_save(node)
-  if (node.parent) then
-    return F.save_name(node.parent)
+  if (node.data.parent) then
+    return F.save_name(node.data.parent)
   else
     return 'map.dat'
   end
