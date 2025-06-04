@@ -41,6 +41,13 @@ function F.invoke(self, node, helpers, game, player, event)
 end
 
 -----------------------------------------------------------------------------
+function F.execute_test(self, node)
+  if node.before then node.before(self, self.context) end
+  node.test(self, self.context)
+  if node.after then node.after(self, self.context) end
+end
+
+-----------------------------------------------------------------------------
 function F.expect(self, actual, expected)
   local context = self.context
   local node = context.node

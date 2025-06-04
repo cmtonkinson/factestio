@@ -120,12 +120,6 @@ function F.results_file(node)
   return 'factestio-' .. node.name .. '-results.json'
 end
 
------------------------------------------------------------------------------
-function F.execute_test(self, node)
-  if node.before then node.before(self, self.context) end
-  node.test(self, self.context)
-  if node.after then node.after(self, self.context) end
-end
 
 return F
 end

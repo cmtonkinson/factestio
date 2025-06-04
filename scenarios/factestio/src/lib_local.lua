@@ -1,7 +1,9 @@
 return function(F)
 
-local io = require('io')
-local json = require('cjson')
+-- Since this code isn't running within Factorio, we can use whatever libraries
+-- and OS calls we want
+local io      = require('io')
+local json    = require('cjson')
 local serpent = require('serpent')
 
 -----------------------------------------------------------------------------
@@ -19,8 +21,8 @@ end
 
 -----------------------------------------------------------------------------
 function F.exec(node, depth)
-  depth = depth or 0
-  local indent = string.rep(" ", depth * 2)
+  d = depth or 0
+  local indent = string.rep(" ", d * 2)
 
   -- Overwrite the scenario map.dat
   F.cmd('cp "%s" "%s"', F.starting_save(node), 'scenarios/factestio/map.dat')
