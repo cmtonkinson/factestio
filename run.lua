@@ -5,12 +5,16 @@ local f = require('scenarios.factestio.src.lib')
 
 -- Process CLI arguments.
 local parser = argparse('run', 'Run the Factestio Behvaior DAG')
-parser:flag('-d --debug', 'Run in debug mode')
-parser:option('-t --timeout', 'Timeout for each scenario in seconds', '8')
+parser:flag('-d --debug')
+  :description('Run in debug mode')
+parser:option('-t --timeout')
+  :description('Timeout for each scenario in seconds')
+  :default('8')
+  :convert(tonumber)
 
 local args = parser:parse()
-if args.debug then f.DEBUG = true end
-f.TIMEOUT = tonumber(args.timeout)
+f.DEBUG = args.debug
+f.TIMEOUT = args.timeout
 
 -- Load the configuration and run DAG root scenarios.
 f.load()
