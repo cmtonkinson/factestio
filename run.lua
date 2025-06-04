@@ -19,7 +19,7 @@ local args = parser:parse()
 f.DEBUG = args.debug
 f.TIMEOUT = args.timeout
 
--- Load the configuration and run DAG root scenarios.
+-- Load the configured DAG and run the root scenarios.
 f.load()
 local roots = f.compile()
 f.run(roots)
