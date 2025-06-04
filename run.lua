@@ -4,7 +4,10 @@ local argparse = require('argparse')
 local f = require('scenarios.factestio.src.lib')
 
 -- Process CLI arguments.
-local parser = argparse('run', 'Run the Factestio Behvaior DAG')
+local parser = argparse()
+  :name('run')
+  :description('Run the Factestio Behvaior DAG')
+  :epilog('For more information, visit https://gitlab.com/cmtonkinson/factestio')
 parser:flag('-d --debug')
   :description('Run in debug mode')
 parser:option('-t --timeout')
