@@ -1,7 +1,7 @@
 local f         = nil
 local this_test = nil
 
--- Setup (but only if we're running as a proper scenario)
+-- Setup (but only if we're actually running in scenario mode)
 if _G.script ~= nil then
   f = require('src.lib')
   this_test = require('test_name')

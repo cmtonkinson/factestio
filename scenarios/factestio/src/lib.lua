@@ -2,41 +2,43 @@
 -------------------------------------------------------------------------------
 -- This gets weird. Because of the way Factorio sandboxes, paths, and loads
 -- scripts, we need to be able to run this logic both within the context of
--- the Factorio scenario and from the outside world. That means specifically
--- the path to the "node" library will change.
+-- the Factorio scenario and from the outside world. That means specifically:
+--   * the apparent path to the "node" library will change
+--   * external libraries (io, cjson, etc.) can't be loaded inside Factorio
 --
 -- But the annoyance doesn't stop there - most of this logic is executed N+1
 -- times per test suite invocation. We first have to analyze the tests that are
 -- written to build the DAG and know which tests need to be run. But then we're
 -- booting the game engine once per test, which needs to run all this logic
--- again each time, just to be able to execute one single test case.
+-- again each time, just to be able to execute one single test case and exit.
 --
 -- "If it's stupid but it works, it ain't stupid."
 -------------------------------------------------------------------------------
 -------------------------------------------------------------------------------
 
--- Node will be in a differrent relative location depending on context.
-local Node = nil
-local io = nil
-local json = nil
+-- This is the module export variable.
+local F = {}
+
+-- We have to declare these ahead of time due to the conditional loading logic.
+local Node    = nil
+local io      = nil
+local json    = nil
 local serpent = nil
 
-if _G.script ~= nil then
+if _G.script ~= nil then -- when running as scenario
   Node = require('src.node')
-else
-  Node = require('scenarios.factestio.src.node')
-  io = require('io')
-  json = require('cjson')
+else -- when runnning standalone from cli
+  Node    = require('scenarios.factestio.src.node')
+  io      = require('io')
+  json    = require('cjson')
   serpent = require('serpent')
 end
 
 -------------------------------------------------------------------------------
--- Module interface.
-local F                = {}
 -- These are initialized statically.
 F.registry             = {}
 F.DEBUG                = false
-F.TEST_TIMEOUT         = 5
+F.TEST_TIMEOUT         = 8
 -- These will be set at runtime.
 F.FACTORIO_BINARY      = ''
 F.FACTORIO_DATA_PATH   = ''
@@ -47,7 +49,7 @@ F.SAVES                = ''
 
 -------------------------------------------------------------------------------
 function F.init()
-  F.ROOT           = '/Users/chris/repo/factestio/'
+  F.ROOT           = './' -- TODO: Does this always work? Probably not.
   F.SCRIPT_OUTPUT  = F.FACTORIO_DATA_PATH .. 'script-output/'
   F.SETTINGS       = F.ROOT .. 'server-settings.json'
   F.SAVES          = F.ROOT .. 'saves'
@@ -58,7 +60,7 @@ function F.init()
 end
 
 -----------------------------------------------------------------------------
-function F.config(cfg)
+function F.set_paths(cfg)
   assert(type(cfg) == "table", "Factestio.config: cfg must be a table")
   if cfg.binary then
     F.FACTORIO_BINARY = cfg.binary
@@ -94,7 +96,7 @@ F.test = F.register_scenario -- alias
 -----------------------------------------------------------------------------
 function F.load()
   local configuration = require('test.config')
-  F.config(configuration.os_paths)
+  F.set_paths(configuration.os_paths)
   for _, name in ipairs(configuration.test_files) do
     local scenarios_tbl = require('test.' .. name)
     for name, config in pairs(scenarios_tbl) do
@@ -134,6 +136,10 @@ function F.compile()
   -- First pass: Generate nodes for all scenarios.
   for name, details in pairs(F.registry) do
     details.name = name
+    details.stats = {}
+    details.stats.assertions = 0
+    details.stats.passed = 0
+    details.stats.failed = 0
     nodes[name] = Node.new(name, details)
   end
 
@@ -181,35 +187,52 @@ function F.run(roots)
   for _, root in pairs(roots) do
     F.exec(root, 0)
   end
+  F.report_results(roots)
 end
 
 -----------------------------------------------------------------------------
 function F.exec(node, depth)
-  local d = depth or 0
-  local indent = string.rep(" ", d * 2)
+  depth = depth or 0
+  local indent = string.rep(" ", depth * 2)
 
   -- Overwrite the scenario map.dat
   F.cmd('cp "%s" "%s"', F.starting_save(node), 'scenarios/factestio/map.dat')
 
   -- Do the thing.
-  F.start_factorio(node, d)
+  F.start_factorio(node, depth)
+  F.yellow(indent .. serpent.block(node, {comment = false, nocode = true}))
 
-  -- Check the results of the test.
-  local file = io.open(node.results_file, "r")
-  if not file then error("Error: Could not open results file " .. node.results_file) end
-  local content = file:read("*a")
-  if not content then error("Error: Could not read results file " .. node.results_file) end
-  file:close()
-  node.context = json.decode(content)
-  if node.context and node.context.status == "pass" then
-    F.green(string.format("%s%s (%d assertions)", indent, node.name, node.context.assertions))
+  if node.data.timeout then
+    -- no-op
   else
-    F.red(string.format("%s%s (failed: %s)", indent, node.name, node.context.error))
+    -- Check the results of the test.
+    local file = io.open(node.results_file, "r")
+    if not file then error("Error: Could not open results file " .. node.results_file) end
+    local content = file:read("*a")
+    if not content then error("Error: Could not read results file " .. node.results_file) end
+    file:close()
+    node.data.results = json.decode(content)
+    node.data.stats = node.data.stats or {}
+  end
+
+  if node.data and node.data.status == "pass" then
+    F.green(string.format("%s%s (%d assertions)", indent, node.name, node.data.stats.assertions))
+  else
+    F.red(string.format("%s%s (failed: %s)", indent, node.name, node.data.error))
+  end
+
+  -- Return if the test didn't pass. We assume children are invalid if the
+  -- parent falied.
+  if node.data.status ~= "pass" then
+    if #node.children > 0 then
+      F.red(indent .. "Skipping children of '" .. node.name .. "' due to failure.")
+    end
+    return
   end
 
   -- Recursively call the children.
   for _, child in pairs(node.children) do
-    F.exec(child, d + 1)
+    F.exec(child, depth + 1)
   end
 end
 
@@ -258,7 +281,7 @@ function F.start_factorio(node, depth)
   -- we add a timeout component to the check as well.
   local done = false
   local timeout = os.time() + F.TEST_TIMEOUT
-  while not done and os.time() < timeout do
+  while not done and os.time() <= timeout do
     local f = io.open(F.DONE_FILE, "r")
     if f then
       done = true
@@ -270,8 +293,15 @@ function F.start_factorio(node, depth)
 
   -- This could theoretically fire a false positive, but the probability is small
   -- and I don't care that much.
+  node.data = node.data or {}
   if os.time() > timeout then
-    F.red(indent .. "Error: Timeout waiting for scenario to finish.")
+    node.data.timeout = true
+    node.data.status = 'fail'
+    node.data.error = 'scenario timeout after ' .. F.TEST_TIMEOUT .. ' seconds'
+  end
+
+  if node.data.stats.failed == 0 and node.data.status ~= 'fail' then
+    node.data.status = 'pass'
   end
 
   -- Now that the scenario is done, we have to find the Factorio PID and
@@ -299,35 +329,53 @@ function F.start_factorio(node, depth)
   F.cmd('rm -f "%s"', 'scenarios/factestio/map.dat')
   F.cmd('rm "%s"', F.TEST_NAME_FILE)
   F.cmd('rm -f "%s"', F.DONE_FILE)
+
+  -- Ensure we export the proper structure so we don't have to check
+  -- elsewhere.
+  node.data = node.data or {}
+  node.data.results = node.data.results or {}
+  node.data.stats = node.data.stats or {}
+
+  -- GTFO
+  return
 end
 
 -----------------------------------------------------------------------------
 function F.invoke(self, node, helpers, game, player, event)
   -- We bundle a bunch of stuff into a single table so that it's easy to pass
-  -- parameters down, and get metadata back up.
+  -- parameters down, and get metadata back up (via node.data)
   self.context = {
-    -- Parameters we're passing through.
-    event        = event,
-    game         = game,
-    player       = player,
-    -- Metadata and status we expect to get back.
-    assertions   = 0,
-    elapsed_time = 0,
-    error        = '',
-    status       = 'unknown',
+    game   = game,
+    player = player,
+    event  = event,
+    node   = node,
+  }
+
+  -- Stub out the node.data table if it doesn't exist.
+  node.data = node.data or {}
+  node.data.stats = node.data.stats or {
+    assertions = 0,
+    passed = 0,
+    failed = 0,
   }
 
   -- We lump the before/test/after functions together in an isolated function
   -- so that we can pcall THAT. This lets us fail the whole thing immediately
   -- if anything raises an error.
+  -- And yes, passing both `self` and `node` is redundant - sue me.
   local ok, err = pcall(F.execute_test, self, node)
-  if not ok then self.context.error = err end
+  if ok then
+    node.data.status = 'pass'
+  else
+    node.data.status = 'fail'
+    node.data.error = err
+  end
 
-  -- Save the results.
+  -- Store the results where the outer script can find them.
   local json = helpers.table_to_json({
-    assertions   = self.context.assertions,
-    error        = self.context.error,
-    status       = self.context.status,
+    stats  = node.data.stats,
+    error  = node.data.error,
+    status = node.data.status,
   })
   helpers.write_file(F.results_file(node), json)
 end
@@ -347,14 +395,17 @@ end
 -----------------------------------------------------------------------------
 function F.expect(self, actual, expected)
   local context = self.context
+  local node = context.node
+  local stats = node.stats
   local result = actual == expected
 
-  context.assertions = context.assertions + 1
+  stats.assertions = stats.assertions + 1
 
   if result then
-    context.status = 'pass'
+    stats.passed = stats.passed + 1
     return true
   else
+    stats.failed = stats.failed + 1
     context.status = 'fail'
     local output = string.format("Expected '%s' but got '%s'", expected, actual)
     F.red(output)
@@ -377,6 +428,47 @@ end
 -----------------------------------------------------------------------------
 function F.green(string, ...)
   print("\27[1;32m" .. string .. "\27[0m", ...)
+end
+
+-----------------------------------------------------------------------------
+function F.report_results(roots)
+  local results = {
+    assertions = 0,
+    passed = 0,
+    failed = 0,
+  }
+
+  for _, root in pairs(roots) do
+    local root_results = F.collect_stats(root)
+    results = F.add_stats(results, root_results)
+  end
+
+  print(string.format("\n\n\tTotal Assertions: %d\n\tPassed: %d\n\tFailed: %d", results.assertions, results.passed, results.failed))
+end
+
+-----------------------------------------------------------------------------
+function F.collect_stats(node)
+  local stats = {
+    assertions = node.stats and node.stats.assertions or 0,
+    passed = node.stats and node.stats.passed or 0,
+    failed = node.stats and node.stats.failed or 0,
+  }
+
+  for _, child in pairs(node.children) do
+    local child_stats = F.collect_stats(child)
+    stats = F.add_stats(stats, child_stats)
+  end
+
+  return stats
+end
+
+-----------------------------------------------------------------------------
+function F.add_stats(a, b)
+  return {
+    assertions = (a.assertions or 0) + (b.assertions or 0),
+    passed = (a.passed or 0) + (b.passed or 0),
+    failed = (a.failed or 0) + (b.failed or 0),
+  }
 end
 
 

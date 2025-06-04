@@ -8,6 +8,7 @@ description = {
   license = "MIT",
 }
 dependencies = {
+  "argparse >= 0.7.1",
   "lua >= 5.1, < 5.5",
   "lua-cjson >= 2.1.0",
   "luassert >= 1.9.0 < 2.0",
