@@ -6,7 +6,6 @@ if _G.script ~= nil then
   f = require('src.lib')
   this_test = require('test_name')
 
-  f.init()
   f.load()
   f.compile()
 end

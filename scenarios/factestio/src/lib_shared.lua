@@ -3,6 +3,18 @@ return function(F)
 local Node = require(F.LOAD_PATH_PREFIX .. 'src.node')
 
 -----------------------------------------------------------------------------
+function F.load()
+  local configuration = require('test.config')
+  F.set_paths(configuration.os_paths)
+  for _, name in ipairs(configuration.test_files) do
+    local scenarios_tbl = require('test.' .. name)
+    for name, config in pairs(scenarios_tbl) do
+      F.register_scenario(name, config)
+    end
+  end
+end
+
+-----------------------------------------------------------------------------
 function F.set_paths(cfg)
   assert(type(cfg) == "table", "Factestio.config: cfg must be a table")
   if cfg.binary then
@@ -34,19 +46,6 @@ function F.register_scenario(name, config)
 
   F.registry[name] = config
 end
-F.test = F.register_scenario -- alias
-
------------------------------------------------------------------------------
-function F.load()
-  local configuration = require('test.config')
-  F.set_paths(configuration.os_paths)
-  for _, name in ipairs(configuration.test_files) do
-    local scenarios_tbl = require('test.' .. name)
-    for name, config in pairs(scenarios_tbl) do
-      F.register_scenario(name, config)
-    end
-  end
-end
 
 -----------------------------------------------------------------------------
 function F.fully_qualified_name(node)
@@ -73,25 +72,34 @@ end
 
 -----------------------------------------------------------------------------
 function F.compile()
-  local nodes = {}
   local roots = {}
 
   -- First pass: Generate nodes for all scenarios.
-  for name, details in pairs(F.registry) do
-    details.name = name
-    details.stats = {}
-    details.stats.assertions = 0
-    details.stats.passed = 0
-    details.stats.failed = 0
-    nodes[name] = Node.new(name, details)
+  for name, config in pairs(F.registry) do
+    local d = {}
+    d.name   = name
+    d.from   = config.from
+    d.root   = false
+    d.before = config.before
+    d.test   = config.test
+    d.after  = config.after
+    d.status = 'pending'
+    d.error  = ''
+    d.stats = {
+      assertions = 0,
+      passed     = 0,
+      failed     = 0,
+    }
+    -- Replace the original registry configuration with the new Node.
+    F.registry[name] = Node.new(name, d)
   end
 
   -- Second pass: Link parent/child relationsips.
-  for name, details in pairs(F.registry) do
-    local node = nodes[name]
-    if details.from then
-      local parent = nodes[details.from]
-      assert(parent, "Parent scenario '" .. details.from .. "' not found for '" .. name .. "'")
+  for name, node in pairs(F.registry) do
+    local data = node.data
+    if data.from then
+      local parent = F.registry[data.from]
+      assert(parent, "Parent scenario '" .. data.from .. "' not found for '" .. name .. "'")
       node.root = false
       parent:add(node)
     else
@@ -100,6 +108,7 @@ function F.compile()
     end
   end
 
+  -- Return DAG roots.
   return roots
 end
 
@@ -119,7 +128,6 @@ end
 function F.results_file(node)
   return 'factestio-' .. node.name .. '-results.json'
 end
-
 
 return F
 end

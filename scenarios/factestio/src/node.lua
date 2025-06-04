@@ -22,5 +22,4 @@ function Node:walk(f)
   end
 end
 
-
 return Node

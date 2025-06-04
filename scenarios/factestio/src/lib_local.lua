@@ -29,7 +29,6 @@ function F.exec(node, depth)
 
   -- Do the thing.
   F.start_factorio(node, depth)
-  F.yellow(indent .. serpent.block(node, {comment = false, nocode = true}))
 
   if node.data.timeout then
     -- no-op
@@ -40,8 +39,11 @@ function F.exec(node, depth)
     local content = file:read("*a")
     if not content then error("Error: Could not read results file " .. node.results_file) end
     file:close()
-    node.data.results = json.decode(content)
-    node.data.stats = node.data.stats or {}
+    local parsed = json.decode(content)
+    -- Overwrite the Node data with anything in the results file.
+    for k, v in pairs(parsed) do
+      node.data[k] = v
+    end
   end
 
   if node.data and node.data.status == "pass" then
@@ -110,7 +112,6 @@ function F.start_factorio(node, depth)
 
   -- This could theoretically fire a false positive, but the probability is small
   -- and I don't care that much.
-  node.data = node.data or {}
   if os.time() > timeout then
     node.data.timeout = true
     node.data.status = 'fail'
@@ -146,12 +147,6 @@ function F.start_factorio(node, depth)
   F.cmd('rm -f "%s"', 'scenarios/factestio/map.dat')
   F.cmd('rm "%s"', F.TEST_NAME_FILE)
   F.cmd('rm -f "%s"', F.DONE_FILE)
-
-  -- Ensure we export the proper structure so we don't have to check
-  -- elsewhere.
-  node.data = node.data or {}
-  node.data.results = node.data.results or {}
-  node.data.stats = node.data.stats or {}
 
   -- GTFO
   return
