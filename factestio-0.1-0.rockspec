@@ -1,3 +1,4 @@
+rockspec_format = "3.0"
 package = "factestio"
 version = "0.1-0"
 source = {
@@ -12,4 +13,11 @@ dependencies = {
   "lua >= 5.2, < 5.3",
   "lua-cjson >= 2.1.0",
   "serpent >= 0.30-2",
+}
+test_dependencies = {
+  "busted",
+  "luacheck",
+}
+test = {
+  type = "busted",
 }

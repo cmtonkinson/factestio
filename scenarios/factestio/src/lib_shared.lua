@@ -1,172 +1,177 @@
 return function(F)
+  local Node = require(F.LOAD_PATH_PREFIX .. "src.node")
 
-local Node = require(F.LOAD_PATH_PREFIX .. 'src.node')
-
------------------------------------------------------------------------------
-function F.load()
-  local configuration = require('factestio.config')
-  F.set_paths(configuration.os_paths)
-  for _, file_name in ipairs(configuration.test_files) do
-    local scenarios_tbl = require('factestio.' .. file_name)
-    -- First pass: collect raw names from this file
-    local file_names = {}
-    for name, _ in pairs(scenarios_tbl) do
-      file_names[name] = true
-    end
-    -- Second pass: register with prefixed names, resolve from
-    for name, config in pairs(scenarios_tbl) do
-      local prefixed_name = file_name .. '.' .. name
-      -- Resolve 'from': if it's a bare name (no dot), it's relative to this file
-      if config.from then
-        if not config.from:find('%.') then
-          -- bare name — resolve to same file
-          config.from = file_name .. '.' .. config.from
-        end
-        -- else: already qualified (e.g. 'other_file.setup') — leave as-is
+  -----------------------------------------------------------------------------
+  function F.load()
+    local configuration = require("factestio.config")
+    F.set_paths(configuration.os_paths)
+    for _, file_name in ipairs(configuration.test_files) do
+      local scenarios_tbl = require("factestio." .. file_name)
+      -- First pass: collect raw names from this file
+      local file_names = {}
+      for name, _ in pairs(scenarios_tbl) do
+        file_names[name] = true
       end
-      F.register_scenario(prefixed_name, config)
+      -- Second pass: register with prefixed names, resolve from
+      for name, config in pairs(scenarios_tbl) do
+        local prefixed_name = file_name .. "." .. name
+        -- Resolve 'from': if it's a bare name (no dot), it's relative to this file
+        if config.from then
+          if not config.from:find("%.") then
+            -- bare name — resolve to same file
+            config.from = file_name .. "." .. config.from
+          end
+          -- else: already qualified (e.g. 'other_file.setup') — leave as-is
+        end
+        F.register_scenario(prefixed_name, config)
+      end
     end
   end
-end
 
------------------------------------------------------------------------------
-function F.set_paths(cfg)
-  assert(type(cfg) == "table", "Factestio.config: cfg must be a table")
-  if cfg.binary then
-    F.FACTORIO_BINARY = cfg.binary
-  end
-  if cfg.data then
-    F.FACTORIO_DATA_PATH = cfg.data .. '/'
-  end
-end
-
------------------------------------------------------------------------------
-function F.register_scenario(name, config)
-  assert(type(name) == "string", "name must be a string")
-  assert(name:match("^[%w_.%-]+$"), "name must only contain letters, numbers, underscores, dashes, and dots")
-
-  assert(type(config) == "table", "config must be a table")
-  assert(type(config.test) == "function", "config.test must be a function")
-
-  if config.before then
-    assert(type(config.before) == "function", "config.before must be a function")
-  end
-  if config.after then
-    assert(type(config.after) == "function", "config.after must be a function")
-  end
-  if config.from then
-    assert(type(config.from) == "string", "config.from must be a string")
+  -----------------------------------------------------------------------------
+  function F.set_paths(cfg)
+    assert(type(cfg) == "table", "Factestio.config: cfg must be a table")
+    if cfg.binary then
+      F.FACTORIO_BINARY = cfg.binary
+    end
+    if cfg.data then
+      F.FACTORIO_DATA_PATH = cfg.data .. "/"
+    end
   end
 
-  if F.registry[name] then
-    error("Duplicate test name '" .. name .. "': already registered. Test names must be unique across all test files.")
-  end
-  F.registry[name] = config
-end
+  -----------------------------------------------------------------------------
+  function F.register_scenario(name, config)
+    assert(type(name) == "string", "name must be a string")
+    assert(name:match("^[%w_.%-]+$"), "name must only contain letters, numbers, underscores, dashes, and dots")
 
------------------------------------------------------------------------------
-function F.fully_qualified_name(node)
-  local fqn = node.data.name
-  if node.parent then
-    fqn = F.fully_qualified_name(node.parent) .. "." .. fqn
-  end
-  return fqn
-end
+    assert(type(config) == "table", "config must be a table")
+    assert(type(config.test) == "function", "config.test must be a function")
 
------------------------------------------------------------------------------
-function F.save_name(node)
-  return 'results/' .. F.fully_qualified_name(node) .. '/factestio-' .. node.data.name .. '.zip'
-end
+    if config.before then
+      assert(type(config.before) == "function", "config.before must be a function")
+    end
+    if config.after then
+      assert(type(config.after) == "function", "config.after must be a function")
+    end
+    if config.from then
+      assert(type(config.from) == "string", "config.from must be a string")
+    end
 
------------------------------------------------------------------------------
-function F.starting_save(node)
-  if (node.parent) then
-    return F.save_name(node.parent)
-  else
-    return 'root-save.zip'
-  end
-end
-
------------------------------------------------------------------------------
-function F.compile()
-  local roots = {}
-
-  -- First pass: Generate nodes for all scenarios.
-  for name, config in pairs(F.registry) do
-    local d = {}
-    d.name   = name
-    d.from   = config.from
-    d.root   = false
-    d.before = config.before
-    d.test   = config.test
-    d.after  = config.after
-    d.status = 'pending'
-    d.error  = ''
-    d.stats = {
-      assertions = 0,
-      passed     = 0,
-      failed     = 0,
-    }
-    -- Replace the original registry configuration with the new Node.
-    F.registry[name] = Node.new(name, d)
+    if F.registry[name] then
+      error(
+        "Duplicate test name '" .. name .. "': already registered. Test names must be unique across all test files."
+      )
+    end
+    F.registry[name] = config
   end
 
-  -- Second pass: Link parent/child relationsips.
-  for name, node in pairs(F.registry) do
-    local data = node.data
-    if data.from then
-      local parent = F.registry[data.from]
-      assert(parent, "Parent scenario '" .. data.from .. "' not found for '" .. name .. "'")
-      node.root = false
-      parent:add(node)
+  -----------------------------------------------------------------------------
+  function F.fully_qualified_name(node)
+    local fqn = node.data.name
+    if node.parent then
+      fqn = F.fully_qualified_name(node.parent) .. "." .. fqn
+    end
+    return fqn
+  end
+
+  -----------------------------------------------------------------------------
+  function F.save_name(node)
+    return "results/" .. F.fully_qualified_name(node) .. "/factestio-" .. node.data.name .. ".zip"
+  end
+
+  -----------------------------------------------------------------------------
+  function F.starting_save(node)
+    if node.parent then
+      return F.save_name(node.parent)
     else
-      node.root = true
-      table.insert(roots, node)
+      return "root-save.zip"
     end
   end
 
-  -- Third pass: detect cycles
-  local function check_cycles(node, visited, path)
-    if visited[node.data.name] then
-      local cycle = {}
-      for _, n in ipairs(path) do table.insert(cycle, n) end
-      table.insert(cycle, node.data.name)
-      error("Cycle detected in test DAG: " .. table.concat(cycle, " -> "))
+  -----------------------------------------------------------------------------
+  function F.compile()
+    local roots = {}
+
+    -- First pass: Generate nodes for all scenarios.
+    for name, config in pairs(F.registry) do
+      local d = {}
+      d.name = name
+      d.from = config.from
+      d.root = false
+      d.before = config.before
+      d.test = config.test
+      d.after = config.after
+      d.status = "pending"
+      d.error = ""
+      d.stats = {
+        assertions = 0,
+        passed = 0,
+        failed = 0,
+      }
+      -- Replace the original registry configuration with the new Node.
+      F.registry[name] = Node.new(name, d)
     end
-    visited[node.data.name] = true
-    table.insert(path, node.data.name)
-    for _, child in ipairs(node.children) do
-      check_cycles(child, visited, path)
+
+    -- Second pass: Link parent/child relationsips.
+    for name, node in pairs(F.registry) do
+      local data = node.data
+      if data.from then
+        local parent = F.registry[data.from]
+        assert(parent, "Parent scenario '" .. data.from .. "' not found for '" .. name .. "'")
+        node.root = false
+        parent:add(node)
+      else
+        node.root = true
+        table.insert(roots, node)
+      end
     end
-    visited[node.data.name] = nil
-    table.remove(path)
+
+    -- Third pass: detect cycles
+    local function check_cycles(node, visited, path)
+      if visited[node.data.name] then
+        local cycle = {}
+        for _, n in ipairs(path) do
+          table.insert(cycle, n)
+        end
+        table.insert(cycle, node.data.name)
+        error("Cycle detected in test DAG: " .. table.concat(cycle, " -> "))
+      end
+      visited[node.data.name] = true
+      table.insert(path, node.data.name)
+      for _, child in ipairs(node.children) do
+        check_cycles(child, visited, path)
+      end
+      visited[node.data.name] = nil
+      table.remove(path)
+    end
+    for _, root in ipairs(roots) do
+      check_cycles(root, {}, {})
+    end
+
+    table.sort(roots, function(a, b)
+      return a.data.name < b.data.name
+    end)
+
+    -- Return DAG roots.
+    return roots
   end
-  for _, root in ipairs(roots) do
-    check_cycles(root, {}, {})
+
+  -----------------------------------------------------------------------------
+  function F.get_current_test_name()
+    local f = io.open(F.TEST_NAME_FILE, "r")
+    if f then
+      local name = f:read("*a")
+      f:close()
+      return name
+    else
+      return nil
+    end
   end
 
-  table.sort(roots, function(a, b) return a.data.name < b.data.name end)
-
-  -- Return DAG roots.
-  return roots
-end
-
------------------------------------------------------------------------------
-function F.get_current_test_name()
-  local f = io.open(F.TEST_NAME_FILE, "r")
-  if f then
-    local name = f:read("*a")
-    f:close()
-    return name
-  else
-    return nil
+  -----------------------------------------------------------------------------
+  function F.results_file(node)
+    return "factestio-" .. node.data.name .. "-results.json"
   end
-end
 
------------------------------------------------------------------------------
-function F.results_file(node)
-  return 'factestio-' .. node.data.name .. '-results.json'
-end
-
-return F
+  return F
 end

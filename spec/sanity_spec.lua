@@ -1,0 +1,5 @@
+describe("factestio", function()
+  it("passes a sanity check", function()
+    assert.is_true(true)
+  end)
+end)

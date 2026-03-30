@@ -5,3 +5,4 @@ tmp/*
 scenarios/factestio/script.dat
 scenarios/factestio/script-init.dat
 scenarios/factestio/test_name.lua
+root-save.zip

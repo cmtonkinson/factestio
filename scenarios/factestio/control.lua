@@ -1,10 +1,10 @@
-local f         = nil
+local f = nil
 local this_test = nil
 
 -- Setup (but only if we're actually running in scenario mode)
 if _G.script ~= nil then
-  f = require('src.lib')
-  this_test = require('test_name')
+  f = require("src.lib")
+  this_test = require("test_name")
 
   f.load()
   f.compile()
@@ -41,12 +41,12 @@ script.on_event(defines.events.on_tick, function(event)
 
   -- Save
   elseif offset == 20 then
-    game.server_save('factestio-' .. this_test)
+    game.server_save("factestio-" .. this_test)
 
   -- Exit
   elseif offset == 30 then
     game.tick_paused = true
-    helpers.write_file(f.DONE_FILE, '1')
+    helpers.write_file(f.DONE_FILE, "1")
   end
 
   return nil

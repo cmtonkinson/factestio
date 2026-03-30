@@ -32,17 +32,17 @@ local F = {}
 
 -- _G.script is defined by Factorio when running a mod/scenario. It's the main
 -- way we can tell if we're running sanboxed or not.
-F.LOAD_PATH_PREFIX = ''
+F.LOAD_PATH_PREFIX = ""
 if _G.script == nil then
   -- When running outside of Factorio we have to add additional path prefixes.
-  F.LOAD_PATH_PREFIX = 'scenarios.factestio.'
+  F.LOAD_PATH_PREFIX = "scenarios.factestio."
 end
 
 -- These subfiles need to be defined in order.
 local subfiles = {
-  'src.lib_config',
-  'src.lib_helpers',
-  'src.lib_shared',
+  "src.lib_config",
+  "src.lib_helpers",
+  "src.lib_shared",
 }
 for _, subfile in ipairs(subfiles) do
   require(F.LOAD_PATH_PREFIX .. subfile)(F)
@@ -50,9 +50,9 @@ end
 
 -- Require whichever remaining specific functions are needed.
 if _G.script == nil then
-  require(F.LOAD_PATH_PREFIX .. 'src.lib_local')(F)
+  require(F.LOAD_PATH_PREFIX .. "src.lib_local")(F)
 else
-  require(F.LOAD_PATH_PREFIX .. 'src.lib_sandboxed')(F)
+  require(F.LOAD_PATH_PREFIX .. "src.lib_sandboxed")(F)
 end
 
 return F
