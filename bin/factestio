@@ -1,9 +1,26 @@
 #!/usr/bin/env zsh
-source ~/.luaver/luaver
-luaver use 5.2.4
+set -euo pipefail
+
+# Resolve FACTESTIO_ROOT from this script's location
 FACTESTIO_ROOT=${0:A:h}/..
 export FACTESTIO_ROOT
+
+# Verify lua is on PATH and is Lua 5.2.x
+if ! command -v lua &>/dev/null; then
+  echo "Error: lua not found on PATH. Install Lua 5.2.x (e.g. via luaver, homebrew, or your package manager)." >&2
+  exit 1
+fi
+LUA_VERSION=$(lua -e 'print(_VERSION)')
+if [[ "$LUA_VERSION" != "Lua 5.2" ]]; then
+  echo "Error: Lua 5.2.x required, but found '$LUA_VERSION'." >&2
+  echo "Install Lua 5.2.x and ensure it is first on your PATH." >&2
+  exit 1
+fi
+
+export LUA_PATH="$FACTESTIO_ROOT/?.lua;$FACTESTIO_ROOT/?/init.lua;./?.lua;./?/init.lua"
+
 mkdir -p "$FACTESTIO_ROOT/tmp"
+
 _factestio_cleanup() {
   local pid_file="$FACTESTIO_ROOT/tmp/factestio.pid"
   if [[ -f "$pid_file" ]]; then
@@ -14,5 +31,5 @@ _factestio_cleanup() {
   fi
 }
 trap '_factestio_cleanup' INT TERM
-export LUA_PATH="$FACTESTIO_ROOT/?.lua;$FACTESTIO_ROOT/?/init.lua;./?.lua;./?/init.lua"
+
 exec lua "$FACTESTIO_ROOT/run.lua" "$@"

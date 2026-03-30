@@ -2,11 +2,22 @@
 
 A hierarchical scenario-based test framework for Factorio mods. Define tests as a DAG — child tests inherit their parent's full world state via save/restore snapshots, letting you build up complex game states incrementally.
 
+> **Platform support:** macOS only at this time. The `bin/factestio` wrapper uses zsh and zsh-specific path resolution. Linux support is planned.
+
 ## Requirements
 
 - Factorio (headless)
-- Lua 5.2.x (via [luaver](https://github.com/DhavalKapil/luaver))
+- Lua 5.2.x on PATH (Factorio's runtime is Lua 5.2; other versions are not supported)
 - LuaRocks
+- zsh (the `factestio` wrapper script uses zsh)
+
+Lua 5.2 is not available via Homebrew core. The recommended approach is [luaver](https://github.com/DhavalKapil/luaver):
+
+```bash
+luaver install 5.2.4 && luaver use 5.2.4
+```
+
+Or compile from source, or use your system package manager if it provides 5.2.x.
 
 ## Installation
 
@@ -14,10 +25,9 @@ A hierarchical scenario-based test framework for Factorio mods. Define tests as 
 brew install cmtonkinson/tap/factestio
 ```
 
-Then install the Lua dependencies (Factorio requires Lua 5.2 — not available via Homebrew):
+Then install the Lua dependencies:
 
 ```bash
-luaver install 5.2.4 && luaver use 5.2.4
 luarocks install --deps-only factestio-0.1-0.rockspec
 ```
 
@@ -136,7 +146,23 @@ test_files = { 'my_tests' }
 | `test` | `function(f, context)` | Required. Main test body. |
 | `from` | `string` | Parent test name. Child starts from parent's saved world state. |
 | `before` | `function(f, context)` | Runs before `test`. |
-| `after` | `function(f, context)` | Runs after `test`. |
+| `after` | `function(f, context)` | Runs after `test`. Always runs even if `test` fails. |
+
+#### `from` name resolution
+
+Within a single test file, `from` is a bare name:
+
+```lua
+verify = { from = 'setup', ... }  -- refers to 'setup' in the same file
+```
+
+To reference a test in a different file, use a fully-qualified dotted name:
+
+```lua
+verify = { from = 'other_file.setup', ... }  -- cross-file reference
+```
+
+Test names are automatically prefixed with their filename in the registry (e.g. `my_tests.setup`), so bare names are relative and dotted names are absolute.
 
 ### Assertions
 

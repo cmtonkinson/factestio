@@ -139,6 +139,10 @@ return function(F)
       visited[node.data.name] = nil
       table.remove(path)
     end
+    -- Note: cycle detection only covers root-reachable nodes. A group of nodes
+    -- that all have 'from' set (no roots among them) would form an orphaned
+    -- subgraph that is never reached here. Those nodes simply produce no roots
+    -- and are silently excluded from the run — they do not cause an error.
     for _, root in ipairs(roots) do
       check_cycles(root, {}, {})
     end

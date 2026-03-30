@@ -5,6 +5,10 @@ clean:
 
 deps:
 	luarocks test --prepare
+	@echo ""
+	@echo "Note: stylua and luacheck must be installed separately:"
+	@echo "  brew install stylua"
+	@echo "  luarocks install luacheck"
 
 format:
 	stylua .
