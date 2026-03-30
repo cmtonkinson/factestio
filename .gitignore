@@ -1,3 +1,7 @@
 results/*
 test/*
 !test/config.lua.example
+tmp/*
+scenarios/factestio/script.dat
+scenarios/factestio/script-init.dat
+scenarios/factestio/test_name.lua

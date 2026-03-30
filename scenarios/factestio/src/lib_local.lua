@@ -31,12 +31,8 @@ function F.exec(node, depth)
   d = depth or 0
   local indent = string.rep(" ", d * 2)
 
-  -- Overwrite the scenario map.dat
-  F.cmd('cp "%s" "%s"', F.starting_save(node), 'scenarios/factestio/map.dat')
-
   -- Do the thing.
   F.start_factorio(node, depth)
-
   if node.data.timeout then
     -- no-op
   else
@@ -80,32 +76,55 @@ function F.start_factorio(node, depth)
   local d = depth or 0
   local indent = string.rep(" ", d * 2)
 
-  -- The way we pass the test name into the scenario is by writing it to a
-  -- Lua file which just returns the string.
-  F.cmd('echo return \'"%s"\' > "%s"', node.name, F.TEST_NAME_FILE)
+  -- Build the Factorio launch command.
+  -- Root tests (no parent): start a fresh world from the scenario on disk.
+  -- Child tests (has parent): restore the parent's saved world state from zip.
+  local load_arg
+  if not node.parent then
+    -- Root test: write the test name to disk so control.lua can require() it,
+    -- then load the scenario fresh (on_init fires, brand-new world).
+    F.cmd('echo return \'"%s"\' > "%s"', node.data.name, F.TEST_NAME_FILE)
+    load_arg = '--start-server-load-scenario factestio/factestio'
+  else
+    -- Child test: take the parent's save zip and inject this test's name into
+    -- it via Python zip surgery, then load it directly (on_load fires, full
+    -- world state — entities, map, storage — is restored from the zip).
+    local parent_zip = F.save_name(node.parent)
+    local child_zip  = F.FACTORIO_DATA_PATH .. 'saves/factestio-child-load.zip'
+    F.cmd('cp "%s" "%s"', parent_zip, child_zip)
+    -- Overwrite test_name.lua inside the zip so control.lua require()s the
+    -- right name when Factorio loads the save.
+    F.cmd(
+      'python3 -c \'' ..
+      'import zipfile, sys, os; ' ..
+      'src = sys.argv[1]; tmp = src + ".tmp"; name = sys.argv[2]; ' ..
+      'zin = zipfile.ZipFile(src, "r"); zout = zipfile.ZipFile(tmp, "w"); ' ..
+      '[zout.writestr(i, ("return \\"" + name + "\\"\\n") if i.filename.endswith("/test_name.lua") else zin.read(i.filename)) for i in zin.infolist()]; ' ..
+      'zin.close(); zout.close(); os.replace(tmp, src)' ..
+      '\' "%s" "%s"',
+      child_zip,
+      node.data.name
+    )
+    load_arg = string.format('--start-server "%s"', 'factestio-child-load')
+  end
 
-  -- Start the headless scenario in the background. Lot of BS going on here
-  -- to redirect output to the right places and set the correct paths.
+  -- Start the headless server in the background. Redirect output to log files.
   local redirect = ''
   F.cmd('> "%s"', F.TEST_STDOUT)
   F.cmd('> "%s"', F.TEST_STDERR)
   if F.DEBUG then
-    -- Send stdout and stderr both to the CLI and to log files.
     redirect = string.format('> >(tee "%s") 2> >(tee "%s" >&2)', F.TEST_STDOUT, F.TEST_STDERR)
   else
-    -- Send stdout and stderr to log files only.
     redirect = string.format('>"%s" 2>"%s"', F.TEST_STDOUT, F.TEST_STDERR)
   end
-  -- Do the thing.
-  F.cmd('/bin/bash -c \'%s --start-server-load-scenario factestio/factestio --server-settings "%s" --disable-audio --nogamepad %s &\''
+  F.cmd('/bin/bash -c \'%s %s --server-settings "%s" --disable-audio --nogamepad %s &\''
     , F.FACTORIO_BINARY
+    , load_arg
     , F.SETTINGS
     , redirect
   )
 
-  -- The scenario will write to DONE_FILE when it's finished. Busywait
-  -- for that. But also we need to be wary of a scenario that may hang, so
-  -- we add a timeout component to the check as well.
+  -- Busywait for the scenario's DONE_FILE signal, with a timeout guard.
   local done = false
   local timeout = os.time() + F.TEST_TIMEOUT
   while not done and os.time() <= timeout do
@@ -118,8 +137,6 @@ function F.start_factorio(node, depth)
     end
   end
 
-  -- This could theoretically fire a false positive, but the probability is small
-  -- and I don't care that much.
   if os.time() > timeout then
     node.data.timeout = true
     node.data.status = 'fail'
@@ -130,9 +147,9 @@ function F.start_factorio(node, depth)
     node.data.status = 'pass'
   end
 
-  -- Now that the scenario is done, we have to find the Factorio PID and
-  -- kill the process manually.
-  local grep = F.cmd_capture('ps aux | grep "start-server-load-scenario factestio/factestio" | grep -v grep')
+  -- Kill the Factorio process. Match on the binary path since the load
+  -- argument differs between root and child tests.
+  local grep = F.cmd_capture('ps aux | grep "[f]actorio.*--server-settings" | grep -v grep')
   local pid = grep:match("(%d+)")
   if pid then
     F.cmd('kill -9 %s', pid)
@@ -140,23 +157,22 @@ function F.start_factorio(node, depth)
     F.red("Error: No PID found for Factorio process.")
   end
 
-  -- Anything we want to save from the test run needs to get put into the appropriate results subdirectory.
+  -- Move artifacts into the per-test results subdirectory.
   local fqn = F.fully_qualified_name(node)
   local results_dir = 'results/' .. fqn .. '/'
-  local save = F.FACTORIO_DATA_PATH .. 'saves/factestio-' .. node.name .. '.zip'
+  local save = F.FACTORIO_DATA_PATH .. 'saves/factestio-' .. node.data.name .. '.zip'
   F.cmd('mkdir -p "%s"', results_dir)
-  F.cmd('mv "%s" "%s"', save, results_dir .. 'factestio-' .. node.name .. ".zip")
+  F.cmd('mv "%s" "%s"', save, results_dir .. 'factestio-' .. node.data.name .. '.zip')
   F.cmd('mv "%s" "%s"', F.TEST_STDOUT, results_dir .. 'stdout.txt')
   F.cmd('mv "%s" "%s"', F.TEST_STDERR, results_dir .. 'stderr.txt')
   node.results_file = results_dir .. 'results.json'
   F.cmd('mv "%s" "%s"', F.SCRIPT_OUTPUT .. F.results_file(node), node.results_file)
 
   -- Clean up transient files.
-  F.cmd('rm -f "%s"', 'scenarios/factestio/map.dat')
-  F.cmd('rm "%s"', F.TEST_NAME_FILE)
+  F.cmd('rm -f "%s"', F.TEST_NAME_FILE)
   F.cmd('rm -f "%s"', F.DONE_FILE)
+  F.cmd('rm -f "%s"', F.FACTORIO_DATA_PATH .. 'saves/factestio-child-load.zip')
 
-  -- GTFO
   return
 end
 
