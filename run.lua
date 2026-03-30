@@ -95,11 +95,6 @@ local function set_mod_enabled(data_path, enabled, quiet)
   end
 end
 
--- Helper: shell command
-local function sh(cmd)
-  return os.execute(cmd)
-end
-
 -- Helper: file/dir exists
 local function exists(path)
   local f = io.open(path, "r")

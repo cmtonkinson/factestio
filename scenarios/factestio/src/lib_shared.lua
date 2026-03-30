@@ -7,12 +7,7 @@ return function(F)
     F.set_paths(configuration.os_paths)
     for _, file_name in ipairs(configuration.test_files) do
       local scenarios_tbl = require("factestio." .. file_name)
-      -- First pass: collect raw names from this file
-      local file_names = {}
-      for name, _ in pairs(scenarios_tbl) do
-        file_names[name] = true
-      end
-      -- Second pass: register with prefixed names, resolve from
+      -- Register with prefixed names, resolve from
       for name, config in pairs(scenarios_tbl) do
         local prefixed_name = file_name .. "." .. name
         -- Resolve 'from': if it's a bare name (no dot), it's relative to this file

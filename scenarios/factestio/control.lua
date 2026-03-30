@@ -11,7 +11,7 @@ if _G.script ~= nil then
 end
 
 -- Initialize (fresh scenario start)
-script.on_init(function(event)
+script.on_init(function(event) -- luacheck: ignore 212
   game.tick_paused = false
   storage.factestio_test_name = nil
 end)
@@ -21,7 +21,7 @@ script.on_load(function()
   -- on_load is read-only for storage; detection happens in on_tick
 end)
 
-script.on_event(defines.events.on_tick, function(event)
+script.on_event(defines.events.on_tick, function(event) -- luacheck: ignore 212
   -- Detect if this is a new test (child loading parent's save).
   -- When test_name.lua inside the save is updated via zip surgery,
   -- this_test won't match storage.factestio_test_name, triggering a reset.

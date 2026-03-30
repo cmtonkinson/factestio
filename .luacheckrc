@@ -2,10 +2,12 @@ std = "lua52"
 
 -- Factorio sandbox globals (used in sandboxed scenario code)
 files["scenarios/factestio/control.lua"] = {
+  globals = {
+    "game", "storage", "helpers", "player",
+  },
   read_globals = {
-    "script", "game", "remote", "rendering", "storage",
-    "serpent", "defines",
-  }
+    "script", "remote", "rendering", "serpent", "defines",
+  },
 }
 files["scenarios/factestio/src/lib_sandboxed.lua"] = {
   read_globals = {

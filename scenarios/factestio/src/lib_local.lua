@@ -4,7 +4,6 @@ return function(F)
   local io = require("io")
   local json = require("cjson")
   local os = require("os")
-  local serpent = require("serpent")
 
   F.start_time = 0
   F.end_time = 0
@@ -29,11 +28,9 @@ return function(F)
   function F.exec(node, depth)
     local d = depth or 0
     local indent = string.rep(" ", d * 2)
-
     -- Do the thing.
     F.start_factorio(node, depth)
-    if node.data.timeout then
-    -- no-op
+    if node.data.timeout then -- luacheck: ignore 542
     else
       -- Check the results of the test.
       local file = io.open(node.results_file, "r")
@@ -82,10 +79,7 @@ return function(F)
   end
 
   -----------------------------------------------------------------------------
-  function F.start_factorio(node, depth)
-    local d = depth or 0
-    local indent = string.rep(" ", d * 2)
-
+  function F.start_factorio(node, depth) -- luacheck: ignore 212
     -- Build the Factorio launch command.
     -- Root tests (no parent): start a fresh world from the scenario on disk.
     -- Child tests (has parent): restore the parent's saved world state from zip.
@@ -109,7 +103,8 @@ return function(F)
           .. "import zipfile, sys, os; "
           .. 'src = sys.argv[1]; tmp = src + ".tmp"; name = sys.argv[2]; '
           .. 'zin = zipfile.ZipFile(src, "r"); zout = zipfile.ZipFile(tmp, "w"); '
-          .. '[zout.writestr(i, ("return \\"" + name + "\\"\\n") if i.filename.endswith("/test_name.lua") else zin.read(i.filename)) for i in zin.infolist()]; '
+          .. '[zout.writestr(i, ("return \\"" + name + "\\"\\n")'
+          .. ' if i.filename.endswith("/test_name.lua") else zin.read(i.filename)) for i in zin.infolist()]; '
           .. "zin.close(); zout.close(); os.replace(tmp, src)"
           .. '\' "%s" "%s"',
         child_zip,
