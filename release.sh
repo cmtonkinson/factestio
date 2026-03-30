@@ -59,7 +59,17 @@ gh release create "$VERSION" \
 # Compute sha256 of the source tarball GitHub generates
 TARBALL_URL="https://github.com/cmtonkinson/factestio/archive/refs/tags/${VERSION}.tar.gz"
 echo "Fetching tarball for sha256: $TARBALL_URL"
-SHA256=$(curl -fsSL "$TARBALL_URL" | shasum -a 256 | awk '{print $1}')
+SHA256=''
+for attempt in {1..10}; do
+  SHA256=$(curl -fsSL "$TARBALL_URL" 2>/dev/null | shasum -a 256 | awk '{print $1}')
+  [[ -n "$SHA256" && "$SHA256" != "da39a3ee5e6b4b0d3255bfef95601890afd80709" ]] && break
+  echo "  Attempt $attempt failed, retrying in 3s..."
+  sleep 3
+done
+if [[ -z "$SHA256" || "$SHA256" == "da39a3ee5e6b4b0d3255bfef95601890afd80709" ]]; then
+  echo "Error: could not fetch tarball after 10 attempts." >&2
+  exit 1
+fi
 echo "sha256: $SHA256"
 
 # Update the Homebrew formula
@@ -94,6 +104,8 @@ with open(formula_path, 'w') as f:
 
 print(f"Updated formula: {formula_path}")
 EOF
+
+ruby -c "$FORMULA" > /dev/null || { echo "Error: formula syntax check failed" >&2; exit 1; }
 
 # Commit and push the tap
 cd "$HOMEBREW_TAP_DIR"

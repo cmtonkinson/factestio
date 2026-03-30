@@ -19,7 +19,7 @@ function F.run(roots)
   F.cmd('mkdir -p "%s"', results_dir)
   -- Kick off the root scenarios.
   F.start_time = os.time()
-  for _, root in pairs(roots) do
+  for _, root in ipairs(roots) do
     F.exec(root, 0)
   end
   F.end_time = os.time()
@@ -28,7 +28,7 @@ end
 
 -----------------------------------------------------------------------------
 function F.exec(node, depth)
-  d = depth or 0
+  local d = depth or 0
   local indent = string.rep(" ", d * 2)
 
   -- Do the thing.
@@ -65,8 +65,11 @@ function F.exec(node, depth)
     return
   end
 
-  -- Recursively call the children.
-  for _, child in pairs(node.children) do
+  -- Recursively call the children in deterministic order.
+  local sorted_children = {}
+  for _, child in ipairs(node.children) do table.insert(sorted_children, child) end
+  table.sort(sorted_children, function(a, b) return a.data.name < b.data.name end)
+  for _, child in ipairs(sorted_children) do
     F.exec(child, depth + 1)
   end
 end
@@ -109,19 +112,17 @@ function F.start_factorio(node, depth)
   end
 
   -- Start the headless server in the background. Redirect output to log files.
-  local redirect = ''
   F.cmd('> "%s"', F.TEST_STDOUT)
   F.cmd('> "%s"', F.TEST_STDERR)
-  if F.DEBUG then
-    redirect = string.format('> >(tee "%s") 2> >(tee "%s" >&2)', F.TEST_STDOUT, F.TEST_STDERR)
-  else
-    redirect = string.format('>"%s" 2>"%s"', F.TEST_STDOUT, F.TEST_STDERR)
-  end
-  F.cmd('/bin/bash -c \'%s %s --server-settings "%s" --disable-audio --nogamepad %s &\''
+  local factorio_cmd = string.format('%s %s --server-settings "%s" --disable-audio --nogamepad'
     , F.FACTORIO_BINARY
     , load_arg
     , F.SETTINGS
-    , redirect
+  )
+  F.cmd('sh -c \'%s > "%s" 2>&1 & echo $! > "%s"\''
+    , factorio_cmd
+    , F.TEST_STDOUT
+    , F.PID_FILE
   )
 
   -- Busywait for the scenario's DONE_FILE signal, with a timeout guard.
@@ -147,14 +148,15 @@ function F.start_factorio(node, depth)
     node.data.status = 'pass'
   end
 
-  -- Kill the Factorio process. Match on the binary path since the load
-  -- argument differs between root and child tests.
-  local grep = F.cmd_capture('ps aux | grep "[f]actorio.*--server-settings" | grep -v grep')
-  local pid = grep:match("(%d+)")
-  if pid then
-    F.cmd('kill -9 %s', pid)
-  else
-    F.red("Error: No PID found for Factorio process.")
+  -- Kill the Factorio process using the saved PID file.
+  local pid_f = io.open(F.PID_FILE, 'r')
+  if pid_f then
+    local pid = pid_f:read('*a'):gsub('%s+', '')
+    pid_f:close()
+    if pid ~= '' then
+      F.cmd('kill -9 %s 2>/dev/null', pid)
+    end
+    os.remove(F.PID_FILE)
   end
 
   -- Move artifacts into the per-test results subdirectory.

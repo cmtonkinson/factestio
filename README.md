@@ -92,6 +92,8 @@ Your mod project's `factestio/` directory contains:
 | `config.lua.example` | Template for `config.lua`. |
 | `*.lua` | Your test files, one per suite. |
 
+Add `factestio/config.lua` to your mod project's `.gitignore` — it contains local paths specific to your machine.
+
 ## Writing tests
 
 Tests are defined in `factestio/` as Lua files returning a table of named scenarios. Each scenario is a table with a `test` function and optional `from`, `before`, and `after` keys.

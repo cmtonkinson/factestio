@@ -38,8 +38,16 @@ function F.execute_test(self)
   -- Yes, passing both `self` and `self.context` is technically redundant.
   -- Sue me.
   if data.before then data.before(self, self.context) end
-  data.test(self, self.context)
-  if data.after then data.after(self, self.context) end
+  local test_ok, test_err = pcall(function() data.test(self, self.context) end)
+  local after_ok, after_err = true, nil
+  if data.after then
+    after_ok, after_err = pcall(function() data.after(self, self.context) end)
+  end
+  if not test_ok then
+    error(test_err, 0)
+  elseif not after_ok then
+    error(after_err, 0)
+  end
 end
 
 -----------------------------------------------------------------------------

@@ -249,7 +249,7 @@ if data_path then
 end
 
 F.DEBUG   = args.debug
-F.TIMEOUT = args.timeout
+F.TEST_TIMEOUT = args.timeout
 
 -- Init paths (F.FACTORIO_DATA_PATH set during F.load via F.set_paths)
 F.load()

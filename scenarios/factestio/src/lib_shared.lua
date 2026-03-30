@@ -43,6 +43,9 @@ function F.register_scenario(name, config)
     assert(type(config.from) == "string", "config.from must be a string")
   end
 
+  if F.registry[name] then
+    error("Duplicate test name '" .. name .. "': already registered. Test names must be unique across all test files.")
+  end
   F.registry[name] = config
 end
 
@@ -106,6 +109,28 @@ function F.compile()
       table.insert(roots, node)
     end
   end
+
+  -- Third pass: detect cycles
+  local function check_cycles(node, visited, path)
+    if visited[node.data.name] then
+      local cycle = {}
+      for _, n in ipairs(path) do table.insert(cycle, n) end
+      table.insert(cycle, node.data.name)
+      error("Cycle detected in test DAG: " .. table.concat(cycle, " -> "))
+    end
+    visited[node.data.name] = true
+    table.insert(path, node.data.name)
+    for _, child in ipairs(node.children) do
+      check_cycles(child, visited, path)
+    end
+    visited[node.data.name] = nil
+    table.remove(path)
+  end
+  for _, root in ipairs(roots) do
+    check_cycles(root, {}, {})
+  end
+
+  table.sort(roots, function(a, b) return a.data.name < b.data.name end)
 
   -- Return DAG roots.
   return roots

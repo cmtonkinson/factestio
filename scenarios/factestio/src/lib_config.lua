@@ -22,6 +22,7 @@ function F.init(root)
   F.DONE_FILE      = F.SCRIPT_OUTPUT .. 'factestio.done'
   F.TEST_STDOUT    = F.SCRIPT_OUTPUT .. 'factestio.stdout'
   F.TEST_STDERR    = F.SCRIPT_OUTPUT .. 'factestio.stderr'
+  F.PID_FILE       = F.SCRIPT_OUTPUT .. 'factestio.pid'
 end
 
 return F
