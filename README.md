@@ -10,13 +10,37 @@ A hierarchical scenario-based test framework for Factorio mods. Define tests as 
 
 ## Installation
 
+Install LuaRocks dependencies:
+
 ```bash
 luarocks install --deps-only factestio-0.1-0.rockspec
 ```
 
+Install the `factestio` CLI:
+
+```bash
+./install.sh
+```
+
+This symlinks `bin/factestio` into `~/.local/bin/factestio`.
+
 ## Setup
 
-1. Copy `test/config.lua.example` to `test/config.lua` and fill in your paths:
+From your mod project directory, run:
+
+```bash
+factestio --on
+```
+
+This will:
+1. Create a `factestio/` directory in your mod project (if not present)
+2. Copy `factestio/config.lua.example` to `factestio/config.lua` for you to fill in
+3. Copy `factestio/example.lua` as a starting point for your tests
+4. Symlink your mod project's `factestio/` into the factestio scenario
+5. Symlink the factestio repo into Factorio's mods directory
+6. Enable factestio in `mod-list.json`
+
+Edit `factestio/config.lua` in your mod project:
 
 ```lua
 return {
@@ -25,29 +49,58 @@ return {
     data = '/Users/<you>/Library/Application Support/factorio',
   },
   test_files = {
-    'example',  -- loads test/example.lua
+    'example',  -- loads factestio/example.lua
   }
 }
-```
-
-2. Symlink the project into Factorio's mods directory so the scenario is accessible:
-
-```bash
-./enable-localdev.sh
 ```
 
 ## Running tests
 
 ```bash
-lua run.lua
+factestio
 ```
+
+Or with options:
+
+```bash
+factestio --debug --timeout 15 /path/to/mod/project
+```
+
+## Disabling
+
+```bash
+factestio --off
+```
+
+This removes symlinks and disables factestio in `mod-list.json`.
+
+## CLI flags
+
+| Flag | Description |
+|------|-------------|
+| `--on` | Enable factestio for this mod project (symlink, mod-list, scaffold) |
+| `--off` | Disable factestio for this mod project |
+| `-q, --quiet` | Suppress informational output (use with `--on`/`--off`) |
+| `-d, --debug` | Run in debug mode |
+| `-t, --timeout N` | Timeout for each scenario in seconds (default: 8) |
+| `mod_dir` | Mod project directory (default: current directory) |
+
+## The `factestio/` directory
+
+Your mod project's `factestio/` directory contains:
+
+| File | Description |
+|------|-------------|
+| `config.lua` | Required. Paths and test file list (gitignored). |
+| `config.lua.example` | Template for `config.lua`. |
+| `*.lua` | Your test files, one per suite. |
 
 ## Writing tests
 
-Tests are defined in `test/` as Lua files returning a table of named scenarios. Each scenario is a table with a `test` function and optional `from`, `before`, and `after` keys.
+Tests are defined in `factestio/` as Lua files returning a table of named scenarios. Each scenario is a table with a `test` function and optional `from`, `before`, and `after` keys.
 
 ```lua
--- test/my_tests.lua
+-- factestio/my_tests.lua
 return {
   -- Root test: starts from a fresh world
   setup = {
@@ -71,7 +124,7 @@ return {
 }
 ```
 
-Register test files in `test/config.lua`:
+Register test files in `factestio/config.lua`:
 
 ```lua
 test_files = { 'my_tests' }

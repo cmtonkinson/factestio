@@ -4,10 +4,10 @@ local Node = require(F.LOAD_PATH_PREFIX .. 'src.node')
 
 -----------------------------------------------------------------------------
 function F.load()
-  local configuration = require('test.config')
+  local configuration = require('factestio.config')
   F.set_paths(configuration.os_paths)
   for _, name in ipairs(configuration.test_files) do
-    local scenarios_tbl = require('test.' .. name)
+    local scenarios_tbl = require('factestio.' .. name)
     for name, config in pairs(scenarios_tbl) do
       F.register_scenario(name, config)
     end
@@ -23,7 +23,6 @@ function F.set_paths(cfg)
   if cfg.data then
     F.FACTORIO_DATA_PATH = cfg.data .. '/'
   end
-  F.init()
 end
 
 -----------------------------------------------------------------------------

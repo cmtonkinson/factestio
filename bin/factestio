@@ -1,0 +1,7 @@
+#!/usr/bin/env zsh
+source ~/.luaver/luaver
+luaver use 5.2.4
+FACTESTIO_ROOT=${0:A:h}/..
+export FACTESTIO_ROOT
+export LUA_PATH="$FACTESTIO_ROOT/?.lua;$FACTESTIO_ROOT/?/init.lua;./?.lua;./?/init.lua"
+exec lua "$FACTESTIO_ROOT/run.lua" "$@"

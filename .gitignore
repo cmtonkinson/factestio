@@ -1,6 +1,6 @@
 results/*
-test/*
-!test/config.lua.example
+factestio/*
+!factestio/config.lua.example
 tmp/*
 scenarios/factestio/script.dat
 scenarios/factestio/script-init.dat

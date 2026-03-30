@@ -13,8 +13,8 @@ F.SETTINGS             = ''
 F.SAVES                = ''
 
 -------------------------------------------------------------------------------
-function F.init()
-  F.ROOT           = './' -- TODO: Does this always work? Probably not.
+function F.init(root)
+  F.ROOT           = root
   F.SCRIPT_OUTPUT  = F.FACTORIO_DATA_PATH .. 'script-output/'
   F.SETTINGS       = F.ROOT .. 'server-settings.json'
   F.SAVES          = F.ROOT .. 'saves'
