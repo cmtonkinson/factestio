@@ -1,4 +1,8 @@
 return function(F)
+  function F.shell_quote(s)
+    return "'" .. tostring(s):gsub("'", "'\\''") .. "'"
+  end
+
   -----------------------------------------------------------------------------
   function F.yellow(string, ...)
     if F.DEBUG then

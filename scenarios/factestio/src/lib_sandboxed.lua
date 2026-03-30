@@ -37,7 +37,12 @@ return function(F)
     -- Yes, passing both `self` and `self.context` is technically redundant.
     -- Sue me.
     if data.before then
-      data.before(self, self.context)
+      local before_ok, before_err = pcall(function()
+        data.before(self, self.context)
+      end)
+      if not before_ok then
+        error(before_err, 0)
+      end
     end
     local test_ok, test_err = pcall(function()
       data.test(self, self.context)
@@ -70,7 +75,13 @@ return function(F)
     else
       stats.failed = stats.failed + 1
       data.status = "fail"
-      local output = string.format("Expected '%s' but got '%s'", expected, actual)
+      local function fmt(v)
+        if type(v) == "table" then
+          return serpent.line(v, { nocode = true })
+        end
+        return tostring(v)
+      end
+      local output = string.format("Expected %s but got %s", fmt(expected), fmt(actual))
       F.red(output)
       error(output)
     end

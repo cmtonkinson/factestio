@@ -63,7 +63,11 @@ end
 
 -- Helper: write mod-list.json
 local function write_mod_list(path, data)
-  local f = io.open(path, "w")
+  local f, err = io.open(path, "w")
+  if not f then
+    io.stderr:write("Error: could not write mod-list.json at " .. path .. ": " .. (err or "unknown error") .. "\n")
+    os.exit(1)
+  end
   f:write(cjson.encode(data))
   f:close()
 end
@@ -107,7 +111,7 @@ end
 
 -- Helper: is symlink pointing to target
 local function symlink_target(path)
-  local f = io.popen('readlink "' .. path .. '" 2>/dev/null')
+  local f = io.popen("readlink " .. F.shell_quote(path) .. " 2>/dev/null")
   local result = f:read("*a"):gsub("\n$", "")
   f:close()
   return result ~= "" and result or nil
@@ -115,7 +119,7 @@ end
 
 -- Helper: resolve absolute path
 local function realpath(path)
-  local f = io.popen('cd "' .. path .. '" 2>/dev/null && pwd')
+  local f = io.popen("cd " .. F.shell_quote(path) .. " 2>/dev/null && pwd")
   local result = f:read("*a"):gsub("\n$", "")
   f:close()
   return result ~= "" and result or nil
@@ -166,7 +170,7 @@ if args.on then
       end
     end
   else
-    os.execute('ln -sf "' .. abs_expected .. '" "' .. link_path .. '"')
+    os.execute("ln -sf " .. F.shell_quote(abs_expected) .. " " .. F.shell_quote(link_path))
     if not quiet then
       print("Created symlink: " .. link_path .. " -> " .. abs_expected)
     end
@@ -181,7 +185,7 @@ if args.on then
         print("Mod symlink already exists: " .. mods_link)
       end
     else
-      os.execute('ln -sf "' .. FACTESTIO_ROOT:gsub("/$", "") .. '" "' .. mods_link .. '"')
+      os.execute("ln -sf " .. F.shell_quote(FACTESTIO_ROOT:gsub("/$", "")) .. " " .. F.shell_quote(mods_link))
       if not quiet then
         print("Created mod symlink: " .. mods_link)
       end
@@ -198,7 +202,7 @@ if args.on then
   -- 4. Scaffold factestio/ in mod project
   local factestio_dir = mod_dir .. "factestio"
   if not realpath(factestio_dir) then
-    os.execute('mkdir -p "' .. factestio_dir .. '"')
+    os.execute("mkdir -p " .. F.shell_quote(factestio_dir))
     if not quiet then
       print("Created directory: " .. factestio_dir)
     end
@@ -207,7 +211,7 @@ if args.on then
   local config_dst = factestio_dir .. "/config.lua"
   if not exists(config_dst) then
     local config_src = FACTESTIO_ROOT .. "factestio/config.lua.example"
-    os.execute('cp "' .. config_src .. '" "' .. config_dst .. '"')
+    os.execute("cp " .. F.shell_quote(config_src) .. " " .. F.shell_quote(config_dst))
     if not quiet then
       print("Created: " .. config_dst)
     end
@@ -216,7 +220,7 @@ if args.on then
   local example_dst = factestio_dir .. "/example.lua"
   if not exists(example_dst) then
     local example_src = FACTESTIO_ROOT .. "factestio/example.lua"
-    os.execute('cp "' .. example_src .. '" "' .. example_dst .. '"')
+    os.execute("cp " .. F.shell_quote(example_src) .. " " .. F.shell_quote(example_dst))
     if not quiet then
       print("Created: " .. example_dst)
     end
@@ -234,7 +238,7 @@ if args.off then
   local link_path = FACTESTIO_ROOT .. "scenarios/factestio/factestio"
   local target = symlink_target(link_path)
   if target then
-    os.execute('rm "' .. link_path .. '"')
+    os.execute("rm " .. F.shell_quote(link_path))
     if not quiet then
       print("Removed symlink: " .. link_path)
     end
@@ -245,7 +249,7 @@ if args.off then
     local mods_link = data_path .. "mods/factestio"
     local mods_target = symlink_target(mods_link)
     if mods_target then
-      os.execute('rm "' .. mods_link .. '"')
+      os.execute("rm " .. F.shell_quote(mods_link))
       if not quiet then
         print("Removed mod symlink: " .. mods_link)
       end

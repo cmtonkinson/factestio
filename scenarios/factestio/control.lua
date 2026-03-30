@@ -8,6 +8,7 @@ if _G.script ~= nil then
 
   f.load()
   f.compile()
+  f.sandbox_init()
 end
 
 -- Initialize (fresh scenario start)

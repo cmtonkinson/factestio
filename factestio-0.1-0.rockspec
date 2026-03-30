@@ -2,7 +2,7 @@ rockspec_format = "3.0"
 package = "factestio"
 version = "0.1-0"
 source = {
-  url = "https://github.com/cmtonkinson/factestio.git",
+  url = "git+https://github.com/cmtonkinson/factestio.git",
 }
 description = {
   summary = "A Lua library for creating hierarchical Factorio test scenarios",

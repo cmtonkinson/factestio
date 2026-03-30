@@ -62,11 +62,11 @@ echo "Fetching tarball for sha256: $TARBALL_URL"
 SHA256=''
 for attempt in {1..10}; do
   SHA256=$(curl -fsSL "$TARBALL_URL" 2>/dev/null | shasum -a 256 | awk '{print $1}')
-  [[ -n "$SHA256" && "$SHA256" != "da39a3ee5e6b4b0d3255bfef95601890afd80709" ]] && break
+  [[ -n "$SHA256" && "$SHA256" != "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" ]] && break
   echo "  Attempt $attempt failed, retrying in 3s..."
   sleep 3
 done
-if [[ -z "$SHA256" || "$SHA256" == "da39a3ee5e6b4b0d3255bfef95601890afd80709" ]]; then
+if [[ -z "$SHA256" || "$SHA256" == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" ]]; then
   echo "Error: could not fetch tarball after 10 attempts." >&2
   exit 1
 fi
