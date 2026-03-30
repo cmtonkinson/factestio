@@ -6,10 +6,25 @@ local Node = require(F.LOAD_PATH_PREFIX .. 'src.node')
 function F.load()
   local configuration = require('factestio.config')
   F.set_paths(configuration.os_paths)
-  for _, name in ipairs(configuration.test_files) do
-    local scenarios_tbl = require('factestio.' .. name)
+  for _, file_name in ipairs(configuration.test_files) do
+    local scenarios_tbl = require('factestio.' .. file_name)
+    -- First pass: collect raw names from this file
+    local file_names = {}
+    for name, _ in pairs(scenarios_tbl) do
+      file_names[name] = true
+    end
+    -- Second pass: register with prefixed names, resolve from
     for name, config in pairs(scenarios_tbl) do
-      F.register_scenario(name, config)
+      local prefixed_name = file_name .. '.' .. name
+      -- Resolve 'from': if it's a bare name (no dot), it's relative to this file
+      if config.from then
+        if not config.from:find('%.') then
+          -- bare name — resolve to same file
+          config.from = file_name .. '.' .. config.from
+        end
+        -- else: already qualified (e.g. 'other_file.setup') — leave as-is
+      end
+      F.register_scenario(prefixed_name, config)
     end
   end
 end
@@ -28,7 +43,7 @@ end
 -----------------------------------------------------------------------------
 function F.register_scenario(name, config)
   assert(type(name) == "string", "name must be a string")
-  assert(name:match("^[%w_-]+$"), "name must only contain letters, numbers, underscores, and dashes")
+  assert(name:match("^[%w_.%-]+$"), "name must only contain letters, numbers, underscores, dashes, and dots")
 
   assert(type(config) == "table", "config must be a table")
   assert(type(config.test) == "function", "config.test must be a function")

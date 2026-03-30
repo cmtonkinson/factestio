@@ -3,5 +3,16 @@ source ~/.luaver/luaver
 luaver use 5.2.4
 FACTESTIO_ROOT=${0:A:h}/..
 export FACTESTIO_ROOT
+mkdir -p "$FACTESTIO_ROOT/tmp"
+_factestio_cleanup() {
+  local pid_file="$FACTESTIO_ROOT/tmp/factestio.pid"
+  if [[ -f "$pid_file" ]]; then
+    local pid
+    pid=$(cat "$pid_file")
+    kill -9 "$pid" 2>/dev/null
+    rm -f "$pid_file"
+  fi
+}
+trap '_factestio_cleanup' INT TERM
 export LUA_PATH="$FACTESTIO_ROOT/?.lua;$FACTESTIO_ROOT/?/init.lua;./?.lua;./?/init.lua"
 exec lua "$FACTESTIO_ROOT/run.lua" "$@"

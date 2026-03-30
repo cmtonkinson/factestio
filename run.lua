@@ -2,6 +2,20 @@
 
 local F = require('scenarios.factestio.src.lib')
 
+-- Verify required rocks are installed
+local required_rocks = {'argparse', 'cjson'}
+local missing = {}
+for _, rock in ipairs(required_rocks) do
+  if not pcall(require, rock) then
+    table.insert(missing, rock)
+  end
+end
+if #missing > 0 then
+  io.stderr:write('Error: missing required Lua rocks: ' .. table.concat(missing, ', ') .. '\n')
+  io.stderr:write('Run: luarocks install --deps-only factestio-0.1-0.rockspec\n')
+  os.exit(1)
+end
+
 local argparse = require('argparse')
 local cjson    = require('cjson')
 local os       = require('os')

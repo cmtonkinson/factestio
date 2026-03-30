@@ -119,10 +119,11 @@ function F.start_factorio(node, depth)
     , load_arg
     , F.SETTINGS
   )
-  F.cmd('sh -c \'%s > "%s" 2>&1 & echo $! > "%s"\''
+  F.cmd('sh -c \'%s > "%s" 2>&1 & PID=$!; echo $PID > "%s"; echo $PID > "%s"\''
     , factorio_cmd
     , F.TEST_STDOUT
     , F.PID_FILE
+    , F.ROOT .. 'tmp/factestio.pid'
   )
 
   -- Busywait for the scenario's DONE_FILE signal, with a timeout guard.
@@ -157,6 +158,7 @@ function F.start_factorio(node, depth)
       F.cmd('kill -9 %s 2>/dev/null', pid)
     end
     os.remove(F.PID_FILE)
+    os.remove(F.ROOT .. 'tmp/factestio.pid')
   end
 
   -- Move artifacts into the per-test results subdirectory.
