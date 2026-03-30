@@ -278,8 +278,8 @@ describe("F.compile", function()
     -- Document: cycle detection works only when cycles are reachable from root nodes.
     -- With root -> A (from="root") -> B (from="A"), tree is: root -> A -> B (no cycle).
     F.registry["root"] = { test = function() end }
-    F.registry["A"]    = { test = function() end, from = "root" }
-    F.registry["B"]    = { test = function() end, from = "A" }
+    F.registry["A"] = { test = function() end, from = "root" }
+    F.registry["B"] = { test = function() end, from = "A" }
     assert.has_no_error(function()
       F.compile()
     end)

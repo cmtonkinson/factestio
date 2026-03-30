@@ -63,7 +63,9 @@ describe("Node", function()
     it("calls f on root first (depth-first pre-order)", function()
       local root = Node.new("root")
       local visited = {}
-      root:walk(function(n) table.insert(visited, n.name) end)
+      root:walk(function(n)
+        table.insert(visited, n.name)
+      end)
       assert.equal("root", visited[1])
     end)
 
@@ -75,7 +77,9 @@ describe("Node", function()
       root:add(b)
 
       local visited = {}
-      root:walk(function(n) table.insert(visited, n.name) end)
+      root:walk(function(n)
+        table.insert(visited, n.name)
+      end)
       assert.equal(3, #visited)
       assert.same({ "root", "a", "b" }, visited)
     end)
@@ -92,7 +96,9 @@ describe("Node", function()
       a:add(a2)
 
       local visited = {}
-      root:walk(function(n) table.insert(visited, n.name) end)
+      root:walk(function(n)
+        table.insert(visited, n.name)
+      end)
       assert.equal(5, #visited)
       assert.same({ "root", "a", "a1", "a2", "b" }, visited)
     end)

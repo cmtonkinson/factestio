@@ -27,10 +27,10 @@ return function(F)
   function F.sandbox_init()
     -- In the Factorio sandbox, helpers.write_file() writes relative to
     -- script-output/ automatically. Use bare filenames here.
-    F.DONE_FILE       = "factestio.done"
-    F.TEST_STDOUT     = "factestio.stdout"
-    F.TEST_STDERR     = "factestio.stderr"
-    F.PID_FILE        = "factestio.pid"
+    F.DONE_FILE = "factestio.done"
+    F.TEST_STDOUT = "factestio.stdout"
+    F.TEST_STDERR = "factestio.stderr"
+    F.PID_FILE = "factestio.pid"
     -- results_file() is called per-node, so no static path needed here.
   end
 
