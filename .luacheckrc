@@ -17,7 +17,7 @@ files["scenarios/factestio/src/lib_sandboxed.lua"] = {
 }
 
 -- Ignore generated/result directories
-exclude_files = { "tmp/**", "results/**" }
+exclude_files = { "tmp/**", "results/**", ".luarocks/**" }
 
 -- Allow long lines (Lua idiom)
 max_line_length = 120
