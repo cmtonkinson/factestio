@@ -43,7 +43,7 @@ parser:argument("mod_dir"):description("Mod project directory (default: current 
 local args = parser:parse()
 
 -- Normalize mod_dir
-local mod_dir = args.mod_dir
+local mod_dir = args.mod_dir or "./"
 if mod_dir:sub(-1) ~= "/" then
   mod_dir = mod_dir .. "/"
 end
