@@ -10,19 +10,16 @@ A hierarchical scenario-based test framework for Factorio mods. Define tests as 
 
 ## Installation
 
-Install LuaRocks dependencies:
+```bash
+brew install cmtonkinson/tap/factestio
+```
+
+Then install the Lua dependencies (Factorio requires Lua 5.2 — not available via Homebrew):
 
 ```bash
+luaver install 5.2.4 && luaver use 5.2.4
 luarocks install --deps-only factestio-0.1-0.rockspec
 ```
-
-Install the `factestio` CLI:
-
-```bash
-./install.sh
-```
-
-This symlinks `bin/factestio` into `~/.local/bin/factestio`.
 
 ## Setup
 
