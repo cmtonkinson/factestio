@@ -1,9 +1,9 @@
 return {
   os_paths = {
-    binary = '/Applications/factorio.app/Contents/MacOS/factorio',
-    data = '/Users/<you>/Library/Application Support/factorio',
+    binary = '<binary>',
+    data = '<data>',
   },
   test_files = {
-    '<my_tests>',
+    'example',
   }
 }

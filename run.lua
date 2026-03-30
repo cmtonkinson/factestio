@@ -28,11 +28,28 @@ if FACTESTIO_ROOT:sub(-1) ~= "/" then
 end
 
 -----------------------------------------------------------------------------
+-- Read version from info.json
+local VERSION = "unknown"
+do
+  local f = io.open(FACTESTIO_ROOT .. "info.json", "r")
+  if f then
+    local ok, info = pcall(cjson.decode, f:read("*a"))
+    f:close()
+    if ok and info and info.version then
+      VERSION = info.version
+    end
+  end
+end
+
+-----------------------------------------------------------------------------
 -- Process CLI arguments
 local parser = argparse()
   :name("factestio")
-  :description("Run the Factestio Behavior DAG")
+  :description("Run the Factestio Behavior DAG (v" .. VERSION .. ")")
   :epilog("For more information, visit https://github.com/cmtonkinson/factestio")
+parser:flag("-V --version")
+  :description("Print version and exit")
+  :action(function() print("factestio " .. VERSION) os.exit(0) end)
 parser:flag("--on"):description("Enable factestio for this mod project (symlink, mod-list, scaffold)")
 parser:flag("--off"):description("Disable factestio for this mod project")
 parser:flag("-q --quiet"):description("Suppress informational output (use with --on/--off)")
@@ -154,31 +171,78 @@ end
 if args.on then
   local quiet = args.quiet
 
-  -- 1. Check/create scenarios/factestio/factestio symlink
-  local link_path = FACTESTIO_ROOT .. "scenarios/factestio/factestio"
-  local target = symlink_target(link_path)
-  local abs_expected = realpath(mod_dir) and (realpath(mod_dir) .. "/factestio") or (mod_dir .. "factestio")
-  local abs_target = target and realpath(target) or nil
+  -- Guess Factorio paths from the current user
+  local whoami_f = io.popen("whoami")
+  local whoami = whoami_f:read("*a"):gsub("%s+$", "")
+  whoami_f:close()
+  local guessed_binary = "/Applications/factorio.app/Contents/MacOS/factorio"
+  local guessed_data = "/Users/" .. whoami .. "/Library/Application Support/factorio"
 
-  if target then
-    if abs_target ~= abs_expected then
-      io.stderr:write("Error: factestio already on for another mod " .. target .. "\n")
-      os.exit(1)
+  local binary_ok = exists(guessed_binary)
+  local data_ok = exists(guessed_data .. "/mods")
+
+  if not quiet then
+    if binary_ok then
+      print("binary @ " .. guessed_binary)
     else
-      if not quiet then
-        print("factestio symlink already correct")
-      end
+      io.stderr:write("Warning: binary not found @ " .. guessed_binary .. "\n")
     end
-  else
-    os.execute("ln -sf " .. F.shell_quote(abs_expected) .. " " .. F.shell_quote(link_path))
-    if not quiet then
-      print("Created symlink: " .. link_path .. " -> " .. abs_expected)
+    if data_ok then
+      print("data   @ " .. guessed_data)
+    else
+      io.stderr:write("Warning: data not found @ " .. guessed_data .. "\n")
     end
   end
 
-  -- 2. Create mods/factestio symlink
-  if data_path then
-    local mods_link = data_path .. "mods/factestio"
+  -- 1. Scaffold factestio/ in mod project
+  local factestio_dir = mod_dir .. "factestio"
+  if not realpath(factestio_dir) then
+    os.execute("mkdir -p " .. F.shell_quote(factestio_dir))
+    if not quiet then
+      print("Created directory: " .. factestio_dir)
+    end
+  end
+
+  -- 2. Write config.lua from template, substituting guessed paths
+  local config_dst = factestio_dir .. "/config.lua"
+  if not exists(config_dst) then
+    local config_src = FACTESTIO_ROOT .. "factestio/config.lua.example"
+    local src_f = io.open(config_src, "r")
+    if src_f then
+      local content = src_f:read("*a")
+      src_f:close()
+      content = content:gsub("<binary>", guessed_binary)
+      content = content:gsub("<data>", guessed_data)
+      local dst_f = io.open(config_dst, "w")
+      if dst_f then
+        dst_f:write(content)
+        dst_f:close()
+        if not quiet then
+          print("Created: " .. config_dst)
+        end
+      end
+    end
+  end
+
+  -- 3. Write example test file
+  local example_dst = factestio_dir .. "/example.lua"
+  if not exists(example_dst) then
+    local example_src = FACTESTIO_ROOT .. "factestio/example.lua"
+    os.execute("cp " .. F.shell_quote(example_src) .. " " .. F.shell_quote(example_dst))
+    if not quiet then
+      print("Created: " .. example_dst)
+    end
+  end
+
+  -- Steps 4 & 5 require Factorio to be present
+  if binary_ok and data_ok then
+    local detected_data = guessed_data .. "/"
+
+    -- 4. Enable in mod-list.json (back up original first via read/modify/write)
+    set_mod_enabled(detected_data, true, quiet)
+
+    -- 5. Create symlinks
+    local mods_link = detected_data .. "mods/factestio"
     local mods_target = symlink_target(mods_link)
     if mods_target then
       if not quiet then
@@ -191,38 +255,28 @@ if args.on then
       end
     end
 
-    -- 3. Enable in mod-list.json
-    set_mod_enabled(data_path, true, quiet)
+    local link_path = FACTESTIO_ROOT .. "scenarios/factestio/factestio"
+    local target = symlink_target(link_path)
+    local abs_expected = realpath(mod_dir) and (realpath(mod_dir) .. "/factestio") or (mod_dir .. "factestio")
+    local abs_target = target and realpath(target) or nil
+
+    if target then
+      if abs_target ~= abs_expected then
+        io.stderr:write("Error: factestio already on for another mod " .. target .. "\n")
+        os.exit(1)
+      elseif not quiet then
+        print("factestio symlink already correct")
+      end
+    else
+      os.execute("ln -sf " .. F.shell_quote(abs_expected) .. " " .. F.shell_quote(link_path))
+      if not quiet then
+        print("Created symlink: " .. link_path .. " -> " .. abs_expected)
+      end
+    end
   else
     if not quiet then
-      print("Note: skipping mod-list.json (no config found yet)")
-    end
-  end
-
-  -- 4. Scaffold factestio/ in mod project
-  local factestio_dir = mod_dir .. "factestio"
-  if not realpath(factestio_dir) then
-    os.execute("mkdir -p " .. F.shell_quote(factestio_dir))
-    if not quiet then
-      print("Created directory: " .. factestio_dir)
-    end
-  end
-
-  local config_dst = factestio_dir .. "/config.lua"
-  if not exists(config_dst) then
-    local config_src = FACTESTIO_ROOT .. "factestio/config.lua.example"
-    os.execute("cp " .. F.shell_quote(config_src) .. " " .. F.shell_quote(config_dst))
-    if not quiet then
-      print("Created: " .. config_dst)
-    end
-  end
-
-  local example_dst = factestio_dir .. "/example.lua"
-  if not exists(example_dst) then
-    local example_src = FACTESTIO_ROOT .. "factestio/example.lua"
-    os.execute("cp " .. F.shell_quote(example_src) .. " " .. F.shell_quote(example_dst))
-    if not quiet then
-      print("Created: " .. example_dst)
+      io.stderr:write("Warning: skipping mod-list.json and symlinks (Factorio not found)\n")
+      io.stderr:write("Edit " .. config_dst .. " then re-run `factestio --on`\n")
     end
   end
 
