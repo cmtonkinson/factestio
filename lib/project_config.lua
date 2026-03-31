@@ -1,6 +1,22 @@
+local Json = require("lib.factestio_json")
 local System = require("lib.system")
 
 local ProjectConfig = {}
+
+function ProjectConfig.title(mod_dir)
+  local info_path = mod_dir .. "info.json"
+  local content = System.read_file(info_path)
+  if not content then
+    return nil
+  end
+
+  local ok, decoded = pcall(Json.decode, content, info_path)
+  if not ok or type(decoded) ~= "table" then
+    return nil
+  end
+
+  return decoded.title
+end
 
 function ProjectConfig.load(mod_dir, opts)
   opts = opts or {}

@@ -1,10 +1,11 @@
 return function(F)
   local Constants = require("lib.constants")
+  local Json = require("lib.factestio_json")
   local Node = require(F.LOAD_PATH_PREFIX .. "src.node")
 
   local function read_mod_name_from_info(mod_dir)
     local info_path = mod_dir .. "info.json"
-    local f = io.open(info_path, "r")
+    local f, read_err = io.open(info_path, "r")
     if not f then
       error("Error: could not read mod info from " .. info_path)
     end
@@ -12,7 +13,12 @@ return function(F)
     local content = f:read("*a")
     f:close()
 
-    local mod_name = content and content:match('"name"%s*:%s*"([^"]+)"')
+    if not content then
+      error("Error: could not read mod info from " .. info_path .. ": " .. (read_err or "unknown error"))
+    end
+
+    local decoded = Json.decode(content, info_path)
+    local mod_name = decoded and decoded.name
     if not mod_name then
       error("Error: could not determine mod name from " .. info_path)
     end

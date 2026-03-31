@@ -1,6 +1,7 @@
 local Constants = require("lib.constants")
 local ModList = require("lib.mod_list")
 local ProjectLinks = require("lib.project_links")
+local ProjectConfig = require("lib.project_config")
 
 local Command = {}
 
@@ -22,7 +23,10 @@ function Command.run(root, mod_dir, data_path, debug, timeout)
     return nil, "Error: missing required Lua rocks: dkjson\nRun: luarocks install --deps-only factestio-*.rockspec\n"
   end
 
-  print(string.format("factestio %s  mod=%s", version, mod_dir))
+  local mod_title = ProjectConfig.title(mod_dir) or mod_dir:match("([^/]+)/?$") or mod_dir
+  print(string.format("factestio: %s", version))
+  print(string.format("mod: %s", mod_title))
+  print(string.format("workdir: %s", mod_dir))
 
   local F = require("scenarios.factestio.src.lib")
   F.DEBUG = debug
