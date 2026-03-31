@@ -1,10 +1,13 @@
 .PHONY: clean deps format lint test ci
 
+ROCKSPEC := $(lastword $(sort $(wildcard *.rockspec)))
+
 clean:
 	rm -rf factestio/results/* results/* tmp/*
 
 deps:
-	luarocks test --prepare
+	luarocks install --only-deps "$(ROCKSPEC)"
+	luarocks test --prepare "$(ROCKSPEC)"
 	@echo ""
 	@echo "Note: stylua and luacheck must be installed separately:"
 	@echo "  brew install stylua"

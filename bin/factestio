@@ -17,7 +17,22 @@ if [[ "$LUA_VERSION" != "Lua 5.2" ]]; then
   exit 1
 fi
 
-export LUA_PATH="$FACTESTIO_ROOT/?.lua;$FACTESTIO_ROOT/?/init.lua;./?.lua;./?/init.lua;${LUA_PATH:-}"
+LUAROCKS_LUA_PATH=""
+LUAROCKS_LUA_CPATH=""
+if command -v luarocks &>/dev/null; then
+  LUAROCKS_LUA_PATH=$(luarocks path --lr-path 2>/dev/null || true)
+  LUAROCKS_LUA_CPATH=$(luarocks path --lr-cpath 2>/dev/null || true)
+fi
+
+if [[ -n "$LUAROCKS_LUA_PATH" ]]; then
+  LUAROCKS_LUA_PATH="${LUAROCKS_LUA_PATH};"
+fi
+if [[ -n "$LUAROCKS_LUA_CPATH" ]]; then
+  LUAROCKS_LUA_CPATH="${LUAROCKS_LUA_CPATH};"
+fi
+
+export LUA_PATH="$FACTESTIO_ROOT/?.lua;$FACTESTIO_ROOT/?/init.lua;./?.lua;./?/init.lua;${LUAROCKS_LUA_PATH}${LUA_PATH:-}"
+export LUA_CPATH="${LUAROCKS_LUA_CPATH}${LUA_CPATH:-}"
 
 mkdir -p "$FACTESTIO_ROOT/tmp"
 
