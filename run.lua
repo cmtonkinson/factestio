@@ -146,6 +146,27 @@ local function realpath(path)
   return result ~= "" and result or nil
 end
 
+-- Helper: verify the active Factorio mod symlink points at this CLI's root
+local function verify_factestio_mod_root(data_path)
+  local mods_link = data_path .. "mods/factestio"
+  local mods_target = symlink_target(mods_link)
+  if not mods_target then
+    return
+  end
+
+  local expected_root = realpath(FACTESTIO_ROOT:gsub("/$", ""))
+  local actual_root = realpath(mods_target)
+  if expected_root and actual_root and expected_root ~= actual_root then
+    io.stderr:write("Error: factestio CLI/mod mismatch detected.\n")
+    io.stderr:write("CLI root: " .. expected_root .. "\n")
+    io.stderr:write("mods/factestio -> " .. actual_root .. "\n")
+    io.stderr:write(
+      "Run `factestio --on` using the factestio binary you intend to use, or invoke the matching binary directly.\n"
+    )
+    os.exit(1)
+  end
+end
+
 -- Helper: add lines to a file if missing
 local function ensure_lines(path, entries)
   local current = ""
@@ -411,6 +432,8 @@ end
 
 -- Warn if factestio not enabled
 if data_path then
+  verify_factestio_mod_root(data_path)
+
   local mod_list = read_mod_list(data_path)
   if mod_list then
     local enabled = false
