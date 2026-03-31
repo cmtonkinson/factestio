@@ -5,6 +5,8 @@ local ProjectLinks = require("lib.project_links")
 local Command = {}
 
 function Command.run(root, mod_dir, data_path, debug, timeout)
+  local version = require("lib.version").read(root)
+
   if data_path then
     local ok, err = ProjectLinks.verify_mod_root(root, data_path)
     if not ok then
@@ -19,6 +21,8 @@ function Command.run(root, mod_dir, data_path, debug, timeout)
   if not pcall(require, "dkjson") then
     return nil, "Error: missing required Lua rocks: dkjson\nRun: luarocks install --deps-only factestio-*.rockspec\n"
   end
+
+  print(string.format("factestio %s  mod=%s", version, mod_dir))
 
   local F = require("scenarios.factestio.src.lib")
   F.DEBUG = debug
