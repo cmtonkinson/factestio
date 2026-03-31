@@ -1,11 +1,11 @@
 # factestio
-
-A hierarchical scenario-based test framework for Factorio mods. Define tests as a DAG — child tests inherit their parent's full world state via save/restore snapshots, letting you build up complex game states incrementally.
+A hierarchical scenario-based test framework for Factorio mods. Define tests as
+a DAG — child tests inherit their parent's full world state via save/restore
+snapshots, letting you build up complex game states incrementally.
 
 > **Platform support:** macOS only at this time. The `bin/factestio` wrapper uses zsh and zsh-specific path resolution. Linux support is planned.
 
 ## Requirements
-
 - Factorio (headless)
 - Lua 5.2.x on PATH (Factorio's runtime is Lua 5.2; other versions are not supported)
 - LuaRocks
@@ -20,7 +20,6 @@ luaver install 5.2.4 && luaver use 5.2.4
 Or compile from source, or use your system package manager if it provides 5.2.x.
 
 ## Installation
-
 ```bash
 brew install cmtonkinson/tap/factestio
 ```
@@ -32,7 +31,6 @@ luarocks install --deps-only factestio-*.rockspec
 ```
 
 ## Setup
-
 From your mod project directory, run:
 
 ```bash
@@ -60,7 +58,6 @@ return {
 ```
 
 ## Running tests
-
 ```bash
 factestio
 ```
@@ -78,7 +75,6 @@ factestio --doctor
 ```
 
 ## Disabling
-
 ```bash
 factestio --off
 ```
@@ -86,7 +82,6 @@ factestio --off
 This removes symlinks and disables factestio in `mod-list.json`.
 
 ## CLI flags
-
 | Flag | Description |
 |------|-------------|
 | `-h, --help` | Show command help |
@@ -100,7 +95,6 @@ This removes symlinks and disables factestio in `mod-list.json`.
 | `mod_dir` | Mod project directory (default: current directory) |
 
 ## The `factestio/` directory
-
 Your mod project's `factestio/` directory contains:
 
 | File | Description |
@@ -113,9 +107,9 @@ Your mod project's `factestio/` directory contains:
 
 `factestio --on` creates `factestio/.gitignore` for you so local config and generated results stay out of version control.
 
-## Writing tests
-
-Tests are defined in `factestio/` as Lua files returning a table of named scenarios. Each scenario is a table with a `test` function and optional `from`, `before`, and `after` keys.
+## Writing tests Tests are defined in `factestio/` as Lua files returning a
+table of named scenarios. Each scenario is a table with a `test` function and
+optional `from`, `before`, and `after` keys.
 
 ```lua
 -- factestio/my_tests.lua
@@ -145,7 +139,6 @@ return {
 All `factestio/*.lua` files are discovered automatically at runtime, except `factestio/config.lua`.
 
 ### DSL reference
-
 | Key | Type | Description |
 |-----|------|-------------|
 | `test` | `function(f, context)` | Required. Main test body. |
@@ -170,13 +163,11 @@ verify = { from = 'other_file.setup', ... }  -- cross-file reference
 Test names are automatically prefixed with their filename in the registry (e.g. `my_tests.setup`), so bare names are relative and dotted names are absolute.
 
 ### Assertions
-
 ```lua
 f:expect(actual, expected)   -- assert actual == expected
 ```
 
 ### Context
-
 ```lua
 context.game     -- LuaGameScript
 context.player   -- nil in headless (no player)
@@ -185,7 +176,6 @@ context.node     -- the test node (metadata)
 ```
 
 ## How it works
-
 Each test runs Factorio headlessly in a fresh process:
 
 - **Root tests** (`no from`): launched with `--start-server-load-scenario`, generating a fresh world.
