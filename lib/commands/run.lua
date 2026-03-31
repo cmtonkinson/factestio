@@ -35,6 +35,7 @@ function Command.run(root, mod_dir, data_path, debug, timeout)
   F.ROOT = root
   F.TEST_FILES_MANIFEST = root .. "scenarios/factestio/" .. Constants.FACTESTIO.TEST_FILES_MANIFEST
   F.TEST_CONTEXT_MANIFEST = root .. "scenarios/factestio/" .. Constants.FACTESTIO.TEST_CONTEXT_MANIFEST
+  F.TEST_CONSTANTS_MANIFEST = root .. "scenarios/factestio/" .. Constants.FACTESTIO.TEST_CONSTANTS_MANIFEST
 
   F.load()
   F.init(root)

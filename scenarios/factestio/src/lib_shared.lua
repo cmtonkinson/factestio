@@ -1,6 +1,5 @@
 return function(F)
-  local Constants = require("lib.constants")
-  local Json = require("lib.factestio_json")
+  local Constants = _G.script == nil and require("lib.constants") or require("test_constants")
   local Node = require(F.LOAD_PATH_PREFIX .. "src.node")
 
   local function read_mod_name_from_info(mod_dir)
@@ -17,8 +16,7 @@ return function(F)
       error("Error: could not read mod info from " .. info_path .. ": " .. (read_err or "unknown error"))
     end
 
-    local decoded = Json.decode(content, info_path)
-    local mod_name = decoded and decoded.name
+    local mod_name = content:match('"name"%s*:%s*"([^"]+)"')
     if not mod_name then
       error("Error: could not determine mod name from " .. info_path)
     end
@@ -54,6 +52,29 @@ return function(F)
   -----------------------------------------------------------------------------
   function F.write_test_context(mod_name)
     write_lua_manifest(F.TEST_CONTEXT_MANIFEST, string.format("return {\n  mod_name = %q,\n}\n", mod_name))
+  end
+
+  -----------------------------------------------------------------------------
+  function F.write_test_constants(constants)
+    local content = "return " .. string.format("{\n")
+    content = content .. "  FACTESTIO = {\n"
+    for key, value in pairs(constants.FACTESTIO) do
+      content = content .. string.format("    %s = %q,\n", key, value)
+    end
+    content = content .. "  },\n"
+    content = content .. "  SCHEDULER = {\n"
+    for key, value in pairs(constants.SCHEDULER) do
+      content = content .. string.format("    %s = %s,\n", key, tostring(value))
+    end
+    content = content .. "  },\n"
+    content = content .. "  RUNTIME = {\n"
+    for key, value in pairs(constants.RUNTIME) do
+      content = content .. string.format("    %s = %s,\n", key, tostring(value))
+    end
+    content = content .. "  },\n"
+    content = content .. "}\n"
+
+    write_lua_manifest(F.TEST_CONSTANTS_MANIFEST, content)
   end
 
   -----------------------------------------------------------------------------
@@ -94,6 +115,7 @@ return function(F)
       file_names = F.discover_test_files()
       F.write_test_manifest(file_names)
       F.write_test_context(read_mod_name_from_info(F.MOD_DIR))
+      F.write_test_constants(Constants)
     else
       file_names = require("test_files")
     end

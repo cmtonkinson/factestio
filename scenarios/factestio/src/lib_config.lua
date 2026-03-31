@@ -1,5 +1,5 @@
 return function(F)
-  local Constants = require("lib.constants")
+  local Constants = _G.script == nil and require("lib.constants") or require("test_constants")
 
   F.registry = {}
   F.DEBUG = false
@@ -23,6 +23,7 @@ return function(F)
     F.TEST_NAME_FILE = F.ROOT .. "scenarios/factestio/" .. Constants.FACTESTIO.TEST_NAME_MANIFEST
     F.TEST_FILES_MANIFEST = F.ROOT .. "scenarios/factestio/" .. Constants.FACTESTIO.TEST_FILES_MANIFEST
     F.TEST_CONTEXT_MANIFEST = F.ROOT .. "scenarios/factestio/" .. Constants.FACTESTIO.TEST_CONTEXT_MANIFEST
+    F.TEST_CONSTANTS_MANIFEST = F.ROOT .. "scenarios/factestio/" .. Constants.FACTESTIO.TEST_CONSTANTS_MANIFEST
     F.DONE_FILE = F.SCRIPT_OUTPUT .. Constants.FACTESTIO.DONE_FILE_NAME
     F.TEST_STDOUT = F.SCRIPT_OUTPUT .. Constants.FACTESTIO.STDOUT_FILE_NAME
     F.TEST_STDERR = F.SCRIPT_OUTPUT .. Constants.FACTESTIO.STDERR_FILE_NAME

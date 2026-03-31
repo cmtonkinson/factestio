@@ -1,4 +1,4 @@
-local Constants = require("lib.constants")
+local Constants = require("test_constants")
 
 local f = nil
 local this_test = nil

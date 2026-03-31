@@ -1,37 +1,48 @@
-local Constants = {}
+local Json = require("lib.factestio_json")
+local System = require("lib.system")
 
-Constants.LUA = {
-  VERSION_STRING = "Lua 5.2",
-  VERSION_MINOR = "5.2",
-}
+local function dirname(path)
+  return path:match("^(.*)/[^/]+$")
+end
 
-Constants.FACTESTIO = {
-  RESULTS_ROOT = "factestio/results",
-  ROOT_SAVE_NAME = "root-save.zip",
-  CHILD_LOAD_BASENAME = "factestio-child-load",
-  ROOT_SAVE_INIT_BASENAME = "factestio-root-save-init",
-  DONE_FILE_NAME = "factestio.done",
-  STDOUT_FILE_NAME = "factestio.stdout",
-  STDERR_FILE_NAME = "factestio.stderr",
-  PID_FILE_NAME = "factestio.pid",
-  TEST_NAME_MANIFEST = "test_name.lua",
-  TEST_FILES_MANIFEST = "test_files.lua",
-  TEST_CONTEXT_MANIFEST = "test_context.lua",
-  SERVER_SETTINGS_FILE = "server-settings.json",
-  MAP_GEN_SETTINGS_FILE = "map-gen-settings.json",
-  TMP_PID_FILE = "tmp/factestio.pid",
-  TMP_SETUP_STDOUT = "tmp/setup-stdout.txt",
-}
+local source = debug.getinfo(1, "S").source
+local module_path = source:sub(1, 1) == "@" and source:sub(2) or source
+local repo_root = dirname(dirname(module_path))
+local content = assert(System.read_file(repo_root .. "/constants.json"))
+local decoded = Json.decode(content, repo_root .. "/constants.json")
 
-Constants.SCHEDULER = {
-  RUN_TICK_OFFSET = 10,
-  SAVE_TICK_OFFSET = 20,
-  EXIT_TICK_OFFSET = 30,
-}
-
-Constants.RUNTIME = {
-  DEFAULT_TEST_TIMEOUT = 8,
-  POLL_INTERVAL_SECONDS = 0.1,
+local Constants = {
+  LUA = {
+    VERSION_STRING = decoded.lua.version_string,
+    VERSION_MINOR = decoded.lua.version_minor,
+  },
+  FACTESTIO = {
+    RESULTS_ROOT = decoded.factestio.results_root,
+    ROOT_SAVE_NAME = decoded.factestio.root_save_name,
+    CHILD_LOAD_BASENAME = decoded.factestio.child_load_basename,
+    ROOT_SAVE_INIT_BASENAME = decoded.factestio.root_save_init_basename,
+    DONE_FILE_NAME = decoded.factestio.done_file_name,
+    STDOUT_FILE_NAME = decoded.factestio.stdout_file_name,
+    STDERR_FILE_NAME = decoded.factestio.stderr_file_name,
+    PID_FILE_NAME = decoded.factestio.pid_file_name,
+    TEST_NAME_MANIFEST = decoded.factestio.test_name_manifest,
+    TEST_FILES_MANIFEST = decoded.factestio.test_files_manifest,
+    TEST_CONTEXT_MANIFEST = decoded.factestio.test_context_manifest,
+    TEST_CONSTANTS_MANIFEST = decoded.factestio.test_constants_manifest,
+    SERVER_SETTINGS_FILE = decoded.factestio.server_settings_file,
+    MAP_GEN_SETTINGS_FILE = decoded.factestio.map_gen_settings_file,
+    TMP_PID_FILE = decoded.factestio.tmp_pid_file,
+    TMP_SETUP_STDOUT = decoded.factestio.tmp_setup_stdout,
+  },
+  SCHEDULER = {
+    RUN_TICK_OFFSET = decoded.scheduler.run_tick_offset,
+    SAVE_TICK_OFFSET = decoded.scheduler.save_tick_offset,
+    EXIT_TICK_OFFSET = decoded.scheduler.exit_tick_offset,
+  },
+  RUNTIME = {
+    DEFAULT_TEST_TIMEOUT = decoded.runtime.default_test_timeout,
+    POLL_INTERVAL_SECONDS = decoded.runtime.poll_interval_seconds,
+  },
 }
 
 return Constants

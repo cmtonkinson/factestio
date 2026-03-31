@@ -15,6 +15,7 @@ describe("local loader", function()
   local original_config
   local original_test_files
   local original_test_context
+  local original_test_constants
   local original_alpha
   local original_beta
   local original_gamma
@@ -27,6 +28,7 @@ describe("local loader", function()
     original_config = package.loaded["factestio.config"]
     original_test_files = package.loaded["test_files"]
     original_test_context = package.loaded["test_context"]
+    original_test_constants = package.loaded["test_constants"]
     original_alpha = package.loaded["factestio.alpha"]
     original_beta = package.loaded["factestio.beta"]
     original_gamma = package.loaded["factestio.gamma"]
@@ -41,6 +43,7 @@ describe("local loader", function()
     package.loaded["factestio.config"] = original_config
     package.loaded["test_files"] = original_test_files
     package.loaded["test_context"] = original_test_context
+    package.loaded["test_constants"] = original_test_constants
     package.loaded["factestio.alpha"] = original_alpha
     package.loaded["factestio.beta"] = original_beta
     package.loaded["factestio.gamma"] = original_gamma
@@ -116,6 +119,34 @@ describe("local loader", function()
     assert.equal('return {\n  mod_name = "demo-mod",\n}\n', table.concat(writes))
   end)
 
+  it("writes the test constants manifest as a Lua module", function()
+    local F = new_local_F()
+    F.TEST_CONSTANTS_MANIFEST = "/tmp/test_constants.lua"
+
+    local writes = {}
+    io.open = function(path, mode) -- luacheck: ignore
+      assert.equal("/tmp/test_constants.lua", path)
+      assert.equal("w", mode)
+      return {
+        write = function(_, chunk)
+          table.insert(writes, chunk)
+        end,
+        close = function() end,
+      }
+    end
+
+    F.write_test_constants({
+      FACTESTIO = { DONE_FILE_NAME = "factestio.done" },
+      SCHEDULER = { RUN_TICK_OFFSET = 10 },
+      RUNTIME = { DEFAULT_TEST_TIMEOUT = 8 },
+    })
+
+    local output = table.concat(writes)
+    assert.matches('DONE_FILE_NAME = "factestio%.done"', output)
+    assert.matches("RUN_TICK_OFFSET = 10", output)
+    assert.matches("DEFAULT_TEST_TIMEOUT = 8", output)
+  end)
+
   it("loads discovered files and writes the manifest outside Factorio", function()
     local F = new_local_F()
     _G.script = nil
@@ -150,6 +181,7 @@ describe("local loader", function()
 
     local manifest_written
     local context_written
+    local constants_written
     F.discover_test_files = function()
       return { "alpha", "beta" }
     end
@@ -159,11 +191,15 @@ describe("local loader", function()
     F.write_test_context = function(mod_name)
       context_written = mod_name
     end
+    F.write_test_constants = function(constants)
+      constants_written = constants
+    end
 
     F.load()
 
     assert.same({ "alpha", "beta" }, manifest_written)
     assert.equal("tmp-mod", context_written)
+    assert.equal("factestio.done", constants_written.FACTESTIO.DONE_FILE_NAME)
     assert.equal("/bin/factorio", F.FACTORIO_BINARY)
     assert.equal("/tmp/factorio-data/", F.FACTORIO_DATA_PATH)
     assert.is_truthy(F.registry["alpha.setup"])
@@ -183,6 +219,7 @@ describe("local loader", function()
     }
     package.loaded["test_files"] = { "gamma" }
     package.loaded["test_context"] = { mod_name = "demo-mod" }
+    package.loaded["test_constants"] = { FACTESTIO = { DONE_FILE_NAME = "factestio.done" } }
     package.loaded["factestio.gamma"] = {
       root = { test = function() end },
     }
@@ -213,6 +250,7 @@ describe("local loader", function()
     package.loaded["test_context"] = {
       mod_name = "demo-mod",
     }
+    package.loaded["test_constants"] = { FACTESTIO = { DONE_FILE_NAME = "factestio.done" } }
 
     package.preload["__demo-mod__.src.helpers"] = function()
       return {

@@ -1,0 +1,33 @@
+{
+  "lua": {
+    "version_string": "Lua 5.2",
+    "version_minor": "5.2"
+  },
+  "factestio": {
+    "results_root": "factestio/results",
+    "root_save_name": "root-save.zip",
+    "child_load_basename": "factestio-child-load",
+    "root_save_init_basename": "factestio-root-save-init",
+    "done_file_name": "factestio.done",
+    "stdout_file_name": "factestio.stdout",
+    "stderr_file_name": "factestio.stderr",
+    "pid_file_name": "factestio.pid",
+    "test_name_manifest": "test_name.lua",
+    "test_files_manifest": "test_files.lua",
+    "test_context_manifest": "test_context.lua",
+    "test_constants_manifest": "test_constants.lua",
+    "server_settings_file": "server-settings.json",
+    "map_gen_settings_file": "map-gen-settings.json",
+    "tmp_pid_file": "tmp/factestio.pid",
+    "tmp_setup_stdout": "tmp/setup-stdout.txt"
+  },
+  "scheduler": {
+    "run_tick_offset": 10,
+    "save_tick_offset": 20,
+    "exit_tick_offset": 30
+  },
+  "runtime": {
+    "default_test_timeout": 8,
+    "poll_interval_seconds": 0.1
+  }
+}
