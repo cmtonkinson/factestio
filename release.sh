@@ -57,7 +57,7 @@ with open('info.json', 'w') as f: json.dump(d, f, indent=2)
 print('  info.json -> ' + sys.argv[1])
 " "$VER"
 
-ROCKSPEC_OLD="factestio-$(cat factestio-*.rockspec | grep '^version' | head -1 | grep -o '[0-9][^\"]*')-0.rockspec"
+ROCKSPEC_OLD=$(echo factestio-*.rockspec)
 ROCKSPEC_NEW="factestio-${VER}-0.rockspec"
 sed -i '' "s/^version = .*/version = \"${VER}-0\"/" "$ROCKSPEC_OLD"
 if [[ "$ROCKSPEC_OLD" != "$ROCKSPEC_NEW" ]]; then
