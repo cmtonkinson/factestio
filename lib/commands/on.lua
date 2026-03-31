@@ -1,21 +1,17 @@
+local Constants = require("lib.constants")
+local FactorioPaths = require("lib.factorio_paths")
 local ModList = require("lib.mod_list")
 local ProjectLinks = require("lib.project_links")
 local System = require("lib.system")
 
 local Command = {}
 
-local function guessed_paths()
-  local whoami_f = io.popen("whoami")
-  local whoami = whoami_f:read("*a"):gsub("%s+$", "")
-  whoami_f:close()
-  return "/Applications/factorio.app/Contents/MacOS/factorio",
-    "/Users/" .. whoami .. "/Library/Application Support/factorio"
-end
-
 function Command.run(root, mod_dir, quiet)
-  local guessed_binary, guessed_data = guessed_paths()
-  local binary_ok = System.exists(guessed_binary)
-  local data_ok = System.exists(guessed_data .. "/mods")
+  local detected = FactorioPaths.detect()
+  local guessed_binary = detected.binary
+  local guessed_data = detected.data
+  local binary_ok = detected.binary_ok
+  local data_ok = detected.data_ok
 
   if not quiet then
     if binary_ok then
@@ -102,23 +98,23 @@ function Command.run(root, mod_dir, quiet)
     return nil, err
   end
 
-  local root_save = root .. "root-save.zip"
+  local root_save = root .. Constants.FACTESTIO.ROOT_SAVE_NAME
   if System.exists(root_save) then
     if not quiet then
-      print("root-save.zip already exists")
+      print(Constants.FACTESTIO.ROOT_SAVE_NAME .. " already exists")
     end
     return 0
   end
 
   if not quiet then
-    print("Generating root-save.zip (this may take a moment)...")
+    print("Generating " .. Constants.FACTESTIO.ROOT_SAVE_NAME .. " (this may take a moment)...")
   end
 
-  local tmp_save_name = "factestio-root-save-init"
+  local tmp_save_name = Constants.FACTESTIO.ROOT_SAVE_INIT_BASENAME
   local tmp_save_base = detected_data .. "saves/" .. tmp_save_name
   local tmp_save_path = tmp_save_base .. ".zip"
-  local map_gen = root .. "map-gen-settings.json"
-  local stdout_log = root .. "tmp/setup-stdout.txt"
+  local map_gen = root .. Constants.FACTESTIO.MAP_GEN_SETTINGS_FILE
+  local stdout_log = root .. Constants.FACTESTIO.TMP_SETUP_STDOUT
   os.execute("mkdir -p " .. System.shell_quote(root .. "tmp"))
 
   local create_cmd = string.format(

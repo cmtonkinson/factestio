@@ -1,4 +1,5 @@
 return function(F)
+  local Constants = require("lib.constants")
   -- Since this code isn't running within Factorio, we can use whatever libraries
   -- and OS calls we want
   local io = require("io")
@@ -125,7 +126,7 @@ return function(F)
       -- it via Python zip surgery, then load it directly (on_load fires, full
       -- world state — entities, map, storage — is restored from the zip).
       local parent_zip = F.save_name(node.parent)
-      local child_zip = F.FACTORIO_DATA_PATH .. "saves/factestio-child-load.zip"
+      local child_zip = F.FACTORIO_DATA_PATH .. "saves/" .. Constants.FACTESTIO.CHILD_LOAD_BASENAME .. ".zip"
       local cp_ok = F.cmd('cp "%s" "%s"', parent_zip, child_zip)
       if not cp_ok then
         error("Failed to copy parent save: " .. parent_zip)
@@ -147,7 +148,7 @@ return function(F)
       if not zip_ok then
         error("Failed to inject test name into child zip: " .. child_zip)
       end
-      load_arg = string.format('--start-server "%s"', "factestio-child-load")
+      load_arg = string.format('--start-server "%s"', Constants.FACTESTIO.CHILD_LOAD_BASENAME)
     end
 
     -- Start the headless server in the background. Redirect output to log files.
@@ -160,7 +161,7 @@ return function(F)
       factorio_cmd,
       F.TEST_STDOUT,
       F.PID_FILE,
-      F.ROOT .. "tmp/factestio.pid"
+      F.ROOT .. Constants.FACTESTIO.TMP_PID_FILE
     )
 
     -- Busywait for the scenario's DONE_FILE signal, with a timeout guard.
@@ -172,7 +173,7 @@ return function(F)
         done = true
         f:close()
       else
-        os.execute("sleep 0.1")
+        os.execute("sleep " .. tostring(Constants.RUNTIME.POLL_INTERVAL_SECONDS))
       end
     end
 
@@ -195,7 +196,7 @@ return function(F)
         F.cmd("kill -9 %s 2>/dev/null", pid)
       end
       os.remove(F.PID_FILE)
-      os.remove(F.ROOT .. "tmp/factestio.pid")
+      os.remove(F.ROOT .. Constants.FACTESTIO.TMP_PID_FILE)
     end
 
     -- Move artifacts into the per-test results subdirectory.
@@ -212,7 +213,7 @@ return function(F)
     -- Clean up transient files.
     F.cmd('rm -f "%s"', F.TEST_NAME_FILE)
     F.cmd('rm -f "%s"', F.DONE_FILE)
-    F.cmd('rm -f "%s"', F.FACTORIO_DATA_PATH .. "saves/factestio-child-load.zip")
+    F.cmd('rm -f "%s"', F.FACTORIO_DATA_PATH .. "saves/" .. Constants.FACTESTIO.CHILD_LOAD_BASENAME .. ".zip")
 
     return
   end

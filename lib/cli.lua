@@ -1,3 +1,4 @@
+local Constants = require("lib.constants")
 local System = require("lib.system")
 
 local Cli = {}
@@ -11,7 +12,11 @@ function Cli.write_help(stream, version)
   stream:write("  factestio [options] [mod_dir]\n")
   stream:write("\n")
   stream:write("Modes:\n")
-  stream:write("  --doctor        Validate the Lua 5.2 and LuaRocks shell environment\n")
+  stream:write(
+    "  --doctor        Validate the Lua "
+      .. Constants.LUA.VERSION_MINOR
+      .. " and LuaRocks shell environment\n"
+  )
   stream:write("  --on            Scaffold and enable Factestio for the target mod project\n")
   stream:write("  --off           Disable Factestio for the target mod project\n")
   stream:write("\n")
@@ -47,7 +52,7 @@ function Cli.parse(argv)
     off = false,
     quiet = false,
     debug = false,
-    timeout = 8,
+    timeout = Constants.RUNTIME.DEFAULT_TEST_TIMEOUT,
     mod_dir = "./",
   }
 

@@ -1,3 +1,5 @@
+local Constants = require("lib.constants")
+
 local f = nil
 local this_test = nil
 
@@ -36,16 +38,16 @@ script.on_event(defines.events.on_tick, function(event) -- luacheck: ignore 212
   local offset = event.tick - base
 
   -- Run the test
-  if offset == 10 and not storage.factestio_ran then
+  if offset == Constants.SCHEDULER.RUN_TICK_OFFSET and not storage.factestio_ran then
     storage.factestio_ran = true
     f:invoke(f.registry[this_test], helpers, game, player, event)
 
   -- Save
-  elseif offset == 20 then
+  elseif offset == Constants.SCHEDULER.SAVE_TICK_OFFSET then
     game.server_save("factestio-" .. f.safe_save_name(this_test))
 
   -- Exit
-  elseif offset == 30 then
+  elseif offset == Constants.SCHEDULER.EXIT_TICK_OFFSET then
     game.tick_paused = true
     helpers.write_file(f.DONE_FILE, "1")
   end

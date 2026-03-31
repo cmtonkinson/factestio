@@ -1,3 +1,4 @@
+local Constants = require("lib.constants")
 local ModList = require("lib.mod_list")
 local ProjectLinks = require("lib.project_links")
 
@@ -24,8 +25,8 @@ function Command.run(root, mod_dir, data_path, debug, timeout)
   F.TEST_TIMEOUT = timeout
   F.MOD_DIR = mod_dir
   F.ROOT = root
-  F.TEST_FILES_MANIFEST = root .. "scenarios/factestio/test_files.lua"
-  F.TEST_CONTEXT_MANIFEST = root .. "scenarios/factestio/test_context.lua"
+  F.TEST_FILES_MANIFEST = root .. "scenarios/factestio/" .. Constants.FACTESTIO.TEST_FILES_MANIFEST
+  F.TEST_CONTEXT_MANIFEST = root .. "scenarios/factestio/" .. Constants.FACTESTIO.TEST_CONTEXT_MANIFEST
 
   F.load()
   F.init(root)

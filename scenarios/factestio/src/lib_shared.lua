@@ -1,4 +1,5 @@
 return function(F)
+  local Constants = require("lib.constants")
   local Node = require(F.LOAD_PATH_PREFIX .. "src.node")
 
   local function read_mod_name_from_info(mod_dir)
@@ -185,7 +186,7 @@ return function(F)
     if node.parent then
       return F.save_name(node.parent)
     else
-      return "root-save.zip"
+      return Constants.FACTESTIO.ROOT_SAVE_NAME
     end
   end
 

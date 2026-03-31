@@ -1,12 +1,14 @@
 return function(F)
+  local Constants = require("lib.constants")
+
   F.registry = {}
   F.DEBUG = false
-  F.TEST_TIMEOUT = 8
+  F.TEST_TIMEOUT = Constants.RUNTIME.DEFAULT_TEST_TIMEOUT
 
   -- These will be set at runtime.
   F.FACTORIO_BINARY = ""
   F.FACTORIO_DATA_PATH = ""
-  F.RESULTS_ROOT = "factestio/results"
+  F.RESULTS_ROOT = Constants.FACTESTIO.RESULTS_ROOT
   F.DONE_FILE = ""
   F.ROOT = ""
   F.SETTINGS = ""
@@ -16,24 +18,24 @@ return function(F)
   function F.init(root)
     F.ROOT = root
     F.SCRIPT_OUTPUT = F.FACTORIO_DATA_PATH .. "script-output/"
-    F.SETTINGS = F.ROOT .. "server-settings.json"
+    F.SETTINGS = F.ROOT .. Constants.FACTESTIO.SERVER_SETTINGS_FILE
     F.SAVES = F.ROOT .. "saves"
-    F.TEST_NAME_FILE = F.ROOT .. "scenarios/factestio/test_name.lua"
-    F.TEST_FILES_MANIFEST = F.ROOT .. "scenarios/factestio/test_files.lua"
-    F.TEST_CONTEXT_MANIFEST = F.ROOT .. "scenarios/factestio/test_context.lua"
-    F.DONE_FILE = F.SCRIPT_OUTPUT .. "factestio.done"
-    F.TEST_STDOUT = F.SCRIPT_OUTPUT .. "factestio.stdout"
-    F.TEST_STDERR = F.SCRIPT_OUTPUT .. "factestio.stderr"
-    F.PID_FILE = F.SCRIPT_OUTPUT .. "factestio.pid"
+    F.TEST_NAME_FILE = F.ROOT .. "scenarios/factestio/" .. Constants.FACTESTIO.TEST_NAME_MANIFEST
+    F.TEST_FILES_MANIFEST = F.ROOT .. "scenarios/factestio/" .. Constants.FACTESTIO.TEST_FILES_MANIFEST
+    F.TEST_CONTEXT_MANIFEST = F.ROOT .. "scenarios/factestio/" .. Constants.FACTESTIO.TEST_CONTEXT_MANIFEST
+    F.DONE_FILE = F.SCRIPT_OUTPUT .. Constants.FACTESTIO.DONE_FILE_NAME
+    F.TEST_STDOUT = F.SCRIPT_OUTPUT .. Constants.FACTESTIO.STDOUT_FILE_NAME
+    F.TEST_STDERR = F.SCRIPT_OUTPUT .. Constants.FACTESTIO.STDERR_FILE_NAME
+    F.PID_FILE = F.SCRIPT_OUTPUT .. Constants.FACTESTIO.PID_FILE_NAME
   end
 
   function F.sandbox_init()
     -- In the Factorio sandbox, helpers.write_file() writes relative to
     -- script-output/ automatically. Use bare filenames here.
-    F.DONE_FILE = "factestio.done"
-    F.TEST_STDOUT = "factestio.stdout"
-    F.TEST_STDERR = "factestio.stderr"
-    F.PID_FILE = "factestio.pid"
+    F.DONE_FILE = Constants.FACTESTIO.DONE_FILE_NAME
+    F.TEST_STDOUT = Constants.FACTESTIO.STDOUT_FILE_NAME
+    F.TEST_STDERR = Constants.FACTESTIO.STDERR_FILE_NAME
+    F.PID_FILE = Constants.FACTESTIO.PID_FILE_NAME
     -- results_file() is called per-node, so no static path needed here.
   end
 

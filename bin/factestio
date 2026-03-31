@@ -1,19 +1,22 @@
 #!/usr/bin/env zsh
 set -euo pipefail
 
+LUA_VERSION_STRING="Lua 5.2"
+LUA_VERSION_MINOR="5.2"
+
 # Resolve FACTESTIO_ROOT from this script's location
 FACTESTIO_ROOT=${0:A:h}/..
 export FACTESTIO_ROOT
 
 # Verify lua is on PATH and is Lua 5.2.x
 if ! command -v lua &>/dev/null; then
-  echo "Error: lua not found on PATH. Install Lua 5.2.x (e.g. via luaver, homebrew, or your package manager)." >&2
+  echo "Error: lua not found on PATH. Install Lua ${LUA_VERSION_MINOR}.x (e.g. via luaver, homebrew, or your package manager)." >&2
   exit 1
 fi
 LUA_VERSION=$(lua -e 'print(_VERSION)')
-if [[ "$LUA_VERSION" != "Lua 5.2" ]]; then
-  echo "Error: Lua 5.2.x required, but found '$LUA_VERSION'." >&2
-  echo "Install Lua 5.2.x and ensure it is first on your PATH." >&2
+if [[ "$LUA_VERSION" != "$LUA_VERSION_STRING" ]]; then
+  echo "Error: Lua ${LUA_VERSION_MINOR}.x required, but found '$LUA_VERSION'." >&2
+  echo "Install Lua ${LUA_VERSION_MINOR}.x and ensure it is first on your PATH." >&2
   exit 1
 fi
 
@@ -26,7 +29,7 @@ LUAROCKS_LUA_PATH=""
 LUAROCKS_LUA_CPATH=""
 if [[ -n "$LUAROCKS_BIN" ]]; then
   LUAROCKS_LUA_VERSION=$("$LUAROCKS_BIN" config lua_version 2>/dev/null | tr -d '[:space:]' || true)
-  if [[ "$LUAROCKS_LUA_VERSION" == "5.2" ]]; then
+  if [[ "$LUAROCKS_LUA_VERSION" == "$LUA_VERSION_MINOR" ]]; then
     LUAROCKS_LUA_PATH=$("$LUAROCKS_BIN" path --lr-path 2>/dev/null || true)
     LUAROCKS_LUA_CPATH=$("$LUAROCKS_BIN" path --lr-cpath 2>/dev/null || true)
   fi

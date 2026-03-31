@@ -1,3 +1,5 @@
+local Constants = require("lib.constants")
+
 local Doctor = {}
 
 local function trim(s)
@@ -42,13 +44,17 @@ function Doctor.collect(opts)
 
   local lua_path = command_output("command -v lua")
   add(lua_path ~= nil, "lua on PATH", lua_path or "not found")
-  add(_VERSION == "Lua 5.2", "running under Lua 5.2", _VERSION)
+  add(_VERSION == Constants.LUA.VERSION_STRING, "running under " .. Constants.LUA.VERSION_STRING, _VERSION)
 
   local luarocks_path = command_output("command -v luarocks")
   add(luarocks_path ~= nil, "luarocks on PATH", luarocks_path or "not found")
   if luarocks_path then
     local lua_version = command_output("luarocks config lua_version")
-    add(lua_version == "5.2", "LuaRocks targets Lua 5.2", lua_version or "unknown")
+    add(
+      lua_version == Constants.LUA.VERSION_MINOR,
+      "LuaRocks targets Lua " .. Constants.LUA.VERSION_MINOR,
+      lua_version or "unknown"
+    )
   end
 
   local lua_path_env = getenv("LUA_PATH")
