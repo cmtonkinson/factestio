@@ -20,8 +20,9 @@ files["scenarios/factestio/factestio/*.lua"] = {
     "settings",
   },
   read_globals = {
-    "defines",
+    "defines", "prototypes",
   },
+  max_line_length = false,
 }
 
 -- Ignore generated/result directories

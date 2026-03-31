@@ -9,6 +9,22 @@ usage() {
   exit 1
 }
 
+latest_tag_for_bump() {
+  local major="$1"
+  local minor="$2"
+  local bump="$3"
+  local pattern
+
+  case "$bump" in
+    patch) pattern="v${major}.${minor}.*" ;;
+    minor) pattern="v${major}.*" ;;
+    major) pattern="v*" ;;
+    *) echo "Error: unsupported bump level '$bump'" >&2; exit 1 ;;
+  esac
+
+  git tag --list "$pattern" --sort=-version:refname | head -1
+}
+
 # Parse args
 USE_LAST_COMMIT=false
 BUMP=''
@@ -38,6 +54,16 @@ else
 fi
 
 IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+
+LAST_LEVEL_TAG=$(latest_tag_for_bump "$MAJOR" "$MINOR" "$BUMP")
+if [[ -n "$LAST_LEVEL_TAG" ]]; then
+  COMMITS_SINCE_LEVEL_TAG=$(git rev-list --count "${LAST_LEVEL_TAG}..HEAD")
+  if [[ "$COMMITS_SINCE_LEVEL_TAG" -eq 0 ]]; then
+    echo "Error: no commits since ${LAST_LEVEL_TAG}; refusing ${BUMP} release." >&2
+    exit 1
+  fi
+fi
+
 case "$BUMP" in
   major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
   minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
