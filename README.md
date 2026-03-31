@@ -43,9 +43,10 @@ This will:
 1. Create a `factestio/` directory in your mod project (if not present)
 2. Copy `factestio/config.lua.example` to `factestio/config.lua` for you to fill in
 3. Copy `factestio/example.lua` as a starting point for your tests
-4. Symlink your mod project's `factestio/` into the factestio scenario
-5. Symlink the factestio repo into Factorio's mods directory
-6. Enable factestio in `mod-list.json`
+4. Create or update `factestio/.gitignore` to ignore local config and generated results
+5. Symlink your mod project's `factestio/` into the factestio scenario
+6. Symlink the factestio repo into Factorio's mods directory
+7. Enable factestio in `mod-list.json`
 
 Edit `factestio/config.lua` in your mod project:
 
@@ -54,9 +55,6 @@ return {
   os_paths = {
     binary = '/Applications/factorio.app/Contents/MacOS/factorio',
     data = '/Users/<you>/Library/Application Support/factorio',
-  },
-  test_files = {
-    'example',  -- loads factestio/example.lua
   }
 }
 ```
@@ -98,11 +96,13 @@ Your mod project's `factestio/` directory contains:
 
 | File | Description |
 |------|-------------|
-| `config.lua` | Required. Paths and test file list (gitignored). |
+| `config.lua` | Required. Local Factorio paths (gitignored). |
 | `config.lua.example` | Template for `config.lua`. |
 | `*.lua` | Your test files, one per suite. |
+| `.gitignore` | Created by `factestio --on`; ignores `config.lua` and `results/`. |
+| `results/` | Generated artifacts from the most recent run. |
 
-Add `factestio/config.lua` to your mod project's `.gitignore` — it contains local paths specific to your machine.
+`factestio --on` creates `factestio/.gitignore` for you so local config and generated results stay out of version control.
 
 ## Writing tests
 
@@ -133,11 +133,7 @@ return {
 }
 ```
 
-Register test files in `factestio/config.lua`:
-
-```lua
-test_files = { 'my_tests' }
-```
+All `factestio/*.lua` files are discovered automatically at runtime, except `factestio/config.lua`.
 
 ### DSL reference
 
@@ -186,4 +182,4 @@ Each test runs Factorio headlessly in a fresh process:
 - **Root tests** (`no from`): launched with `--start-server-load-scenario`, generating a fresh world.
 - **Child tests** (`from = 'parent'`): the parent's save zip is loaded with `--start-server`, restoring the full world state including all entities.
 
-At tick +10 the test runs, at tick +20 the world is saved, at tick +30 the process signals completion. Results and saves are collected under `results/`.
+At tick +10 the test runs, at tick +20 the world is saved, at tick +30 the process signals completion. Results and saves are collected under `factestio/results/`.

@@ -1,7 +1,7 @@
 .PHONY: clean deps format lint test ci
 
 clean:
-	rm -rf results/* tmp/*
+	rm -rf factestio/results/* results/* tmp/*
 
 deps:
 	luarocks test --prepare

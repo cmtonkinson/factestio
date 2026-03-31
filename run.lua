@@ -146,6 +146,46 @@ local function realpath(path)
   return result ~= "" and result or nil
 end
 
+-- Helper: add lines to a file if missing
+local function ensure_lines(path, entries)
+  local current = ""
+  local f = io.open(path, "r")
+  if f then
+    current = f:read("*a") or ""
+    f:close()
+  end
+
+  local seen = {}
+  for line in current:gmatch("[^\r\n]+") do
+    seen[line] = true
+  end
+
+  local changed = false
+  local output = current
+  for _, entry in ipairs(entries) do
+    if not seen[entry] then
+      if output ~= "" and not output:match("\n$") then
+        output = output .. "\n"
+      end
+      output = output .. entry .. "\n"
+      seen[entry] = true
+      changed = true
+    end
+  end
+
+  if changed or not exists(path) then
+    local out, err = io.open(path, "w")
+    if not out then
+      io.stderr:write("Error: could not write " .. path .. ": " .. (err or "unknown error") .. "\n")
+      os.exit(1)
+    end
+    out:write(output)
+    out:close()
+  end
+
+  return changed
+end
+
 -----------------------------------------------------------------------------
 -- Load config to get data path (needed for --on/--off and enabled check)
 -- We need factestio/config.lua from mod_dir
@@ -235,14 +275,24 @@ if args.on then
     end
   end
 
-  -- Steps 4 & 5 require Factorio to be present
+  -- 4. Add a scoped gitignore for local config and generated results
+  local gitignore_dst = factestio_dir .. "/.gitignore"
+  local gitignore_changed = ensure_lines(gitignore_dst, {
+    "config.lua",
+    "results/",
+  })
+  if not quiet and gitignore_changed then
+    print("Updated: " .. gitignore_dst)
+  end
+
+  -- Steps 5 & 6 require Factorio to be present
   if binary_ok and data_ok then
     local detected_data = guessed_data .. "/"
 
-    -- 4. Enable in mod-list.json (back up original first via read/modify/write)
+    -- 5. Enable in mod-list.json (back up original first via read/modify/write)
     set_mod_enabled(detected_data, true, quiet)
 
-    -- 5. Create symlinks
+    -- 6. Create symlinks
     local mods_link = detected_data .. "mods/factestio"
     local mods_target = symlink_target(mods_link)
     if mods_target then
@@ -378,6 +428,9 @@ end
 
 F.DEBUG = args.debug
 F.TEST_TIMEOUT = args.timeout
+F.MOD_DIR = mod_dir
+F.ROOT = FACTESTIO_ROOT
+F.TEST_FILES_MANIFEST = FACTESTIO_ROOT .. "scenarios/factestio/test_files.lua"
 
 -- Init paths (F.FACTORIO_DATA_PATH set during F.load via F.set_paths)
 F.load()

@@ -10,8 +10,44 @@ return function(F)
   F.had_failures = false
 
   -----------------------------------------------------------------------------
+  function F.discover_test_files()
+    assert(type(F.MOD_DIR) == "string" and F.MOD_DIR ~= "", "F.MOD_DIR must be set before loading tests")
+
+    local test_dir = F.MOD_DIR .. "factestio"
+    local find_cmd =
+      string.format("find %s -maxdepth 1 -type f -name '*.lua' -print 2>/dev/null", F.shell_quote(test_dir))
+    local proc = io.popen(find_cmd)
+    if not proc then
+      error("Error: could not scan " .. test_dir .. " for test files")
+    end
+
+    local paths = {}
+    for line in proc:lines() do
+      table.insert(paths, line)
+    end
+    proc:close()
+
+    return F.discovered_test_files(paths)
+  end
+
+  -----------------------------------------------------------------------------
+  function F.write_test_manifest(file_names)
+    local f, err = io.open(F.TEST_FILES_MANIFEST, "w")
+    if not f then
+      error("Error: could not write test manifest " .. F.TEST_FILES_MANIFEST .. ": " .. (err or "unknown error"))
+    end
+
+    f:write("return {\n")
+    for _, file_name in ipairs(file_names) do
+      f:write(string.format("  %q,\n", file_name))
+    end
+    f:write("}\n")
+    f:close()
+  end
+
+  -----------------------------------------------------------------------------
   function F.run(roots)
-    local results_dir = "results"
+    local results_dir = F.RESULTS_ROOT
     -- Clean up results from the last run.
     F.cmd('rm -rf "%s"', results_dir)
     F.cmd('mkdir -p "%s"', results_dir)
@@ -164,7 +200,7 @@ return function(F)
 
     -- Move artifacts into the per-test results subdirectory.
     local fqn = F.fully_qualified_name(node)
-    local results_dir = "results/" .. fqn .. "/"
+    local results_dir = F.RESULTS_ROOT .. "/" .. fqn .. "/"
     local save = F.FACTORIO_DATA_PATH .. "saves/factestio-" .. F.safe_save_name(node.data.name) .. ".zip"
     F.cmd('mkdir -p "%s"', results_dir)
     F.cmd('mv "%s" "%s"', save, results_dir .. "factestio-" .. F.safe_save_name(node.data.name) .. ".zip")

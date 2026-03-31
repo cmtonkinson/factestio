@@ -2,10 +2,34 @@ return function(F)
   local Node = require(F.LOAD_PATH_PREFIX .. "src.node")
 
   -----------------------------------------------------------------------------
+  function F.discovered_test_files(paths)
+    local file_names = {}
+
+    for _, path in ipairs(paths) do
+      local file_name = path:match("([^/]+)%.lua$")
+      if file_name and file_name ~= "config" then
+        table.insert(file_names, file_name)
+      end
+    end
+
+    table.sort(file_names)
+    return file_names
+  end
+
+  -----------------------------------------------------------------------------
   function F.load()
     local configuration = require("factestio.config")
     F.set_paths(configuration.os_paths)
-    for _, file_name in ipairs(configuration.test_files) do
+
+    local file_names
+    if _G.script == nil then
+      file_names = F.discover_test_files()
+      F.write_test_manifest(file_names)
+    else
+      file_names = require("test_files")
+    end
+
+    for _, file_name in ipairs(file_names) do
       local scenarios_tbl = require("factestio." .. file_name)
       -- Register with prefixed names, resolve from
       for name, config in pairs(scenarios_tbl) do
@@ -86,7 +110,12 @@ return function(F)
 
   -----------------------------------------------------------------------------
   function F.save_name(node)
-    return "results/" .. F.fully_qualified_name(node) .. "/factestio-" .. F.safe_save_name(node.data.name) .. ".zip"
+    return F.RESULTS_ROOT
+      .. "/"
+      .. F.fully_qualified_name(node)
+      .. "/factestio-"
+      .. F.safe_save_name(node.data.name)
+      .. ".zip"
   end
 
   -----------------------------------------------------------------------------

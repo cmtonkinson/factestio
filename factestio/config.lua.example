@@ -3,7 +3,4 @@ return {
     binary = '<binary>',
     data = '<data>',
   },
-  test_files = {
-    'example',
-  }
 }

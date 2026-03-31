@@ -197,17 +197,31 @@ describe("F.safe_save_name", function()
   end)
 end)
 
+describe("F.discovered_test_files", function()
+  it("returns sorted module names for all non-config lua files", function()
+    local paths = {
+      "/tmp/factestio/zeta.lua",
+      "/tmp/factestio/config.lua",
+      "/tmp/factestio/alpha.lua",
+      "/tmp/factestio/helpers.txt",
+      "/tmp/factestio/beta.lua",
+    }
+
+    assert.same({ "alpha", "beta", "zeta" }, F.discovered_test_files(paths))
+  end)
+end)
+
 describe("F.save_name", function()
   it("returns correct path for a node named 'test' with FQN 'example.test'", function()
     local parent = Node.new("example", { name = "example" })
     local child = Node.new("test", { name = "test" })
     parent:add(child)
-    assert.equal("results/example.test/factestio-test.zip", F.save_name(child))
+    assert.equal("factestio/results/example.test/factestio-test.zip", F.save_name(child))
   end)
 
   it("sanitizes dots in node name for the zip filename", function()
     local node = Node.new("example.setup", { name = "example.setup" })
-    assert.equal("results/example.setup/factestio-example-setup.zip", F.save_name(node))
+    assert.equal("factestio/results/example.setup/factestio-example-setup.zip", F.save_name(node))
   end)
 end)
 
@@ -221,7 +235,7 @@ describe("F.starting_save", function()
     local parent = Node.new("example", { name = "example" })
     local child = Node.new("test", { name = "test" })
     parent:add(child)
-    -- parent's save_name = "results/example/factestio-example.zip"
+    -- parent's save_name = "factestio/results/example/factestio-example.zip"
     assert.equal(F.save_name(parent), F.starting_save(child))
   end)
 end)
