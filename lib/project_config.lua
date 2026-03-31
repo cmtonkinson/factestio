@@ -13,8 +13,11 @@ function ProjectConfig.load(mod_dir, opts)
       return nil
     end
 
-    return nil, "Error: could not load factestio/config.lua from " .. mod_dir .. "\n"
-      .. "Run `factestio --on` first to scaffold the config.\n"
+    return nil,
+      "Error: could not load factestio/config.lua from "
+        .. mod_dir
+        .. "\n"
+        .. "Run `factestio --on` first to scaffold the config.\n"
   end
 
   return configuration

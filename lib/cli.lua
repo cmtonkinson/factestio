@@ -13,9 +13,7 @@ function Cli.write_help(stream, version)
   stream:write("\n")
   stream:write("Modes:\n")
   stream:write(
-    "  --doctor        Validate the Lua "
-      .. Constants.LUA.VERSION_MINOR
-      .. " and LuaRocks shell environment\n"
+    "  --doctor        Validate the Lua " .. Constants.LUA.VERSION_MINOR .. " and LuaRocks shell environment\n"
   )
   stream:write("  --on            Scaffold and enable Factestio for the target mod project\n")
   stream:write("  --off           Disable Factestio for the target mod project\n")

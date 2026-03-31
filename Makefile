@@ -22,4 +22,4 @@ lint:
 test:
 	busted -o gtest
 
-ci: lint test
+verify: format lint test

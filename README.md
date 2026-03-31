@@ -3,13 +3,13 @@ A hierarchical scenario-based test framework for Factorio mods. Define tests as
 a DAG — child tests inherit their parent's full world state via save/restore
 snapshots, letting you build up complex game states incrementally.
 
-> **Platform support:** macOS only at this time. The `bin/factestio` wrapper uses zsh and zsh-specific path resolution. Linux support is planned.
+> **Platform support:** macOS is the primary supported platform. Linux bootstrap and path detection are now supported on a best-effort basis for common installs, but have not been validated as extensively.
 
 ## Requirements
 - Factorio (headless)
 - Lua 5.2.x on PATH (Factorio's runtime is Lua 5.2; other versions are not supported)
 - LuaRocks
-- zsh (the `factestio` wrapper script uses zsh)
+- bash
 
 Lua 5.2 is not available via Homebrew core. The recommended approach is [luaver](https://github.com/DhavalKapil/luaver):
 
@@ -56,6 +56,19 @@ return {
   }
 }
 ```
+
+On Linux, common defaults are:
+
+```lua
+return {
+  os_paths = {
+    binary = '/home/<you>/.factorio/bin/x64/factorio',
+    data = '/home/<you>/.factorio',
+  }
+}
+```
+
+`factestio --on` also checks `FACTESTIO_FACTORIO_BINARY` and `FACTESTIO_FACTORIO_DATA` before falling back to platform defaults.
 
 ## Running tests
 ```bash

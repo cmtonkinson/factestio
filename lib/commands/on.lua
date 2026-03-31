@@ -17,12 +17,12 @@ function Command.run(root, mod_dir, quiet)
     if binary_ok then
       print("binary @ " .. guessed_binary)
     else
-      io.stderr:write("Warning: binary not found @ " .. guessed_binary .. "\n")
+      io.stderr:write("Warning: binary not found @ " .. tostring(guessed_binary) .. "\n")
     end
     if data_ok then
       print("data   @ " .. guessed_data)
     else
-      io.stderr:write("Warning: data not found @ " .. guessed_data .. "\n")
+      io.stderr:write("Warning: data not found @ " .. tostring(guessed_data) .. "\n")
     end
   end
 
@@ -82,7 +82,7 @@ function Command.run(root, mod_dir, quiet)
     return 0
   end
 
-  local detected_data = guessed_data .. "/"
+  local detected_data = System.ensure_trailing_slash(guessed_data)
   local ok, err = ModList.set_enabled(detected_data, true, quiet)
   if not ok then
     return nil, err
