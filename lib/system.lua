@@ -31,6 +31,10 @@ function System.exists(path)
   return false
 end
 
+function System.lexists(path)
+  return System.command_succeeds("test -e " .. System.shell_quote(path) .. " -o -L " .. System.shell_quote(path))
+end
+
 function System.symlink_target(path)
   local f = io.popen("readlink " .. System.shell_quote(path) .. " 2>/dev/null")
   local result = f:read("*a"):gsub("\n$", "")

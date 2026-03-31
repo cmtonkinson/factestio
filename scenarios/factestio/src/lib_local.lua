@@ -62,6 +62,15 @@ return function(F)
   end
 
   -----------------------------------------------------------------------------
+  local function move_if_exists(source_path, target_path)
+    if not source_path or not F.cmd('test -e "%s"', source_path) then
+      return false
+    end
+    F.cmd('mv "%s" "%s"', source_path, target_path)
+    return true
+  end
+
+  -----------------------------------------------------------------------------
   function F.exec(node, depth)
     local d = depth or 0
     local indent = string.rep(" ", d * 2)
@@ -69,6 +78,9 @@ return function(F)
     F.start_factorio(node)
     if not node.data.timeout then
       -- Check the results of the test.
+      if not node.results_file then
+        error("Error: missing results file for " .. node.data.name)
+      end
       local file = io.open(node.results_file, "r")
       if not file then
         error("Error: Could not open results file " .. node.results_file)
@@ -204,11 +216,15 @@ return function(F)
     local results_dir = F.RESULTS_ROOT .. "/" .. fqn .. "/"
     local save = F.FACTORIO_DATA_PATH .. "saves/factestio-" .. F.safe_save_name(node.data.name) .. ".zip"
     F.cmd('mkdir -p "%s"', results_dir)
-    F.cmd('mv "%s" "%s"', save, results_dir .. "factestio-" .. F.safe_save_name(node.data.name) .. ".zip")
-    F.cmd('mv "%s" "%s"', F.TEST_STDOUT, results_dir .. "stdout.txt")
-    F.cmd('mv "%s" "%s"', F.TEST_STDERR, results_dir .. "stderr.txt")
-    node.results_file = results_dir .. "results.json"
-    F.cmd('mv "%s" "%s"', F.SCRIPT_OUTPUT .. F.results_file(node), node.results_file)
+    move_if_exists(save, results_dir .. "factestio-" .. F.safe_save_name(node.data.name) .. ".zip")
+    move_if_exists(F.TEST_STDOUT, results_dir .. "stdout.txt")
+    move_if_exists(F.TEST_STDERR, results_dir .. "stderr.txt")
+
+    local results_target = results_dir .. "results.json"
+    local results_source = F.SCRIPT_OUTPUT .. F.results_file(node)
+    if move_if_exists(results_source, results_target) then
+      node.results_file = results_target
+    end
 
     -- Clean up transient files.
     F.cmd('rm -f "%s"', F.TEST_NAME_FILE)
