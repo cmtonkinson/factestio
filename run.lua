@@ -321,11 +321,11 @@ if args.on then
     local abs_expected_root = realpath(FACTESTIO_ROOT:gsub("/$", "")) or FACTESTIO_ROOT:gsub("/$", "")
     if mods_target then
       if abs_mods_target ~= abs_expected_root then
-        os.execute("rm " .. F.shell_quote(mods_link))
-        os.execute("ln -sf " .. F.shell_quote(abs_expected_root) .. " " .. F.shell_quote(mods_link))
-        if not quiet then
-          print("Updated mod symlink: " .. mods_link .. " -> " .. abs_expected_root)
-        end
+        io.stderr:write("Error: factestio mod symlink mismatch detected during --on.\n")
+        io.stderr:write("CLI root: " .. abs_expected_root .. "\n")
+        io.stderr:write("mods/factestio -> " .. (abs_mods_target or mods_target) .. "\n")
+        io.stderr:write("Remove the existing symlink or run the matching factestio binary instead.\n")
+        os.exit(1)
       elseif not quiet then
         print("Mod symlink already exists: " .. mods_link)
       end
