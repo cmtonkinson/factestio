@@ -1,20 +1,5 @@
 #!/usr/bin/env lua
 
--- Verify required rocks are installed
-local required_rocks = { "argparse" }
-local missing = {}
-for _, rock in ipairs(required_rocks) do
-  if not pcall(require, rock) then
-    table.insert(missing, rock)
-  end
-end
-if #missing > 0 then
-  io.stderr:write("Error: missing required Lua rocks: " .. table.concat(missing, ", ") .. "\n")
-  io.stderr:write("Run: luarocks install --deps-only factestio-*.rockspec\n")
-  os.exit(1)
-end
-
-local argparse = require("argparse")
 local os = require("os")
 
 -----------------------------------------------------------------------------
@@ -63,25 +48,69 @@ do
 end
 
 -----------------------------------------------------------------------------
--- Process CLI arguments
-local parser = argparse()
-  :name("factestio")
-  :description("Run the Factestio Behavior DAG (v" .. VERSION .. ")")
-  :epilog("For more information, visit https://github.com/cmtonkinson/factestio")
-parser:flag("-V --version"):description("Print version and exit"):action(function()
-  print("factestio " .. VERSION)
-  os.exit(0)
-end)
-parser:flag("--on"):description("Enable factestio for this mod project (symlink, mod-list, scaffold)")
-parser:flag("--off"):description("Disable factestio for this mod project")
-parser:flag("-q --quiet"):description("Suppress informational output (use with --on/--off)")
-parser:flag("-d --debug"):description("Run in debug mode")
-parser:option("-t --timeout"):description("Timeout for each scenario in seconds"):default("8"):convert(tonumber)
-parser:argument("mod_dir"):description("Mod project directory (default: current directory)"):default("./"):args("?")
+local function usage()
+  io.stderr:write("Usage: factestio [--on|--off] [-q|--quiet] [-d|--debug] [-t|--timeout N] [mod_dir]\n")
+  os.exit(1)
+end
 
-local args = parser:parse()
+local args = {
+  on = false,
+  off = false,
+  quiet = false,
+  debug = false,
+  timeout = 8,
+  mod_dir = "./",
+}
 
--- Normalize mod_dir
+do
+  local i = 1
+  while i <= #arg do
+    local current = arg[i]
+    if current == "-V" or current == "--version" then
+      print("factestio " .. VERSION)
+      os.exit(0)
+    elseif current == "--on" then
+      args.on = true
+    elseif current == "--off" then
+      args.off = true
+    elseif current == "-q" or current == "--quiet" then
+      args.quiet = true
+    elseif current == "-d" or current == "--debug" then
+      args.debug = true
+    elseif current == "-t" or current == "--timeout" then
+      i = i + 1
+      local value = arg[i]
+      if not value then
+        usage()
+      end
+      args.timeout = tonumber(value)
+      if not args.timeout then
+        io.stderr:write("Error: timeout must be a number.\n")
+        os.exit(1)
+      end
+    elseif current:match("^%-%-timeout=") then
+      args.timeout = tonumber(current:match("^%-%-timeout=(.+)$"))
+      if not args.timeout then
+        io.stderr:write("Error: timeout must be a number.\n")
+        os.exit(1)
+      end
+    elseif current:sub(1, 1) == "-" then
+      usage()
+    else
+      if args.mod_dir ~= "./" then
+        usage()
+      end
+      args.mod_dir = current
+    end
+    i = i + 1
+  end
+end
+
+if args.on and args.off then
+  io.stderr:write("Error: --on and --off are mutually exclusive.\n")
+  os.exit(1)
+end
+
 local mod_dir = ensure_trailing_slash(args.mod_dir or "./")
 
 -----------------------------------------------------------------------------
