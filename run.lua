@@ -267,6 +267,7 @@ if args.on then
 
   -- 2. Write config.lua from template, substituting guessed paths
   local config_dst = factestio_dir .. "/config.lua"
+  local already_initialized = exists(config_dst)
   if not exists(config_dst) then
     local config_src = FACTESTIO_ROOT .. "factestio/config.lua.example"
     local src_f = io.open(config_src, "r")
@@ -286,9 +287,9 @@ if args.on then
     end
   end
 
-  -- 3. Write example test file
+  -- 3. Write example test file on first-time initialization only
   local example_dst = factestio_dir .. "/example.lua"
-  if not exists(example_dst) then
+  if not already_initialized and not exists(example_dst) then
     local example_src = FACTESTIO_ROOT .. "factestio/example.lua"
     os.execute("cp " .. F.shell_quote(example_src) .. " " .. F.shell_quote(example_dst))
     if not quiet then
