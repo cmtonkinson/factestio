@@ -14,9 +14,11 @@ describe("local loader", function()
   local original_script
   local original_config
   local original_test_files
+  local original_test_context
   local original_alpha
   local original_beta
   local original_gamma
+  local original_require
 
   before_each(function()
     original_io_popen = io.popen
@@ -24,17 +26,21 @@ describe("local loader", function()
     original_script = rawget(_G, "script")
     original_config = package.loaded["factestio.config"]
     original_test_files = package.loaded["test_files"]
+    original_test_context = package.loaded["test_context"]
     original_alpha = package.loaded["factestio.alpha"]
     original_beta = package.loaded["factestio.beta"]
     original_gamma = package.loaded["factestio.gamma"]
+    original_require = _G.require
   end)
 
   after_each(function()
     io.popen = original_io_popen -- luacheck: ignore
     io.open = original_io_open -- luacheck: ignore
     _G.script = original_script
+    _G.require = original_require
     package.loaded["factestio.config"] = original_config
     package.loaded["test_files"] = original_test_files
+    package.loaded["test_context"] = original_test_context
     package.loaded["factestio.alpha"] = original_alpha
     package.loaded["factestio.beta"] = original_beta
     package.loaded["factestio.gamma"] = original_gamma
@@ -89,9 +95,32 @@ describe("local loader", function()
     assert.equal('return {\n  "alpha",\n  "beta",\n}\n', table.concat(writes))
   end)
 
+  it("writes the test context manifest with the mod name", function()
+    local F = new_local_F()
+    F.TEST_CONTEXT_MANIFEST = "/tmp/test_context.lua"
+
+    local writes = {}
+    io.open = function(path, mode) -- luacheck: ignore
+      assert.equal("/tmp/test_context.lua", path)
+      assert.equal("w", mode)
+      return {
+        write = function(_, chunk)
+          table.insert(writes, chunk)
+        end,
+        close = function() end,
+      }
+    end
+
+    F.write_test_context("demo-mod")
+
+    assert.equal('return {\n  mod_name = "demo-mod",\n}\n', table.concat(writes))
+  end)
+
   it("loads discovered files and writes the manifest outside Factorio", function()
     local F = new_local_F()
     _G.script = nil
+    F.MOD_DIR = "/tmp/mod/"
+    F.TEST_CONTEXT_MANIFEST = "/tmp/test_context.lua"
 
     package.loaded["factestio.config"] = {
       os_paths = {
@@ -106,17 +135,35 @@ describe("local loader", function()
       child = { from = "setup", test = function() end },
     }
 
+    io.open = function(path, mode) -- luacheck: ignore
+      if path == "/tmp/mod/info.json" then
+        assert.equal("r", mode)
+        return {
+          read = function()
+            return [[{"name":"tmp-mod"}]]
+          end,
+          close = function() end,
+        }
+      end
+      return original_io_open(path, mode)
+    end
+
     local manifest_written
+    local context_written
     F.discover_test_files = function()
       return { "alpha", "beta" }
     end
     F.write_test_manifest = function(file_names)
       manifest_written = file_names
     end
+    F.write_test_context = function(mod_name)
+      context_written = mod_name
+    end
 
     F.load()
 
     assert.same({ "alpha", "beta" }, manifest_written)
+    assert.equal("tmp-mod", context_written)
     assert.equal("/bin/factorio", F.FACTORIO_BINARY)
     assert.equal("/tmp/factorio-data/", F.FACTORIO_DATA_PATH)
     assert.is_truthy(F.registry["alpha.setup"])
@@ -135,6 +182,7 @@ describe("local loader", function()
       },
     }
     package.loaded["test_files"] = { "gamma" }
+    package.loaded["test_context"] = { mod_name = "demo-mod" }
     package.loaded["factestio.gamma"] = {
       root = { test = function() end },
     }
@@ -149,5 +197,45 @@ describe("local loader", function()
     F.load()
 
     assert.is_truthy(F.registry["gamma.root"])
+  end)
+
+  it("maps bare src requires to the target mod while loading tests in Factorio", function()
+    local F = new_local_F()
+    _G.script = {}
+
+    package.loaded["factestio.config"] = {
+      os_paths = {
+        binary = "/bin/factorio",
+        data = "/tmp/factorio-data",
+      },
+    }
+    package.loaded["test_files"] = { "gamma" }
+    package.loaded["test_context"] = {
+      mod_name = "demo-mod",
+    }
+
+    package.preload["__demo-mod__.src.helpers"] = function()
+      return {
+        marker = "target-mod-helper",
+      }
+    end
+
+    package.preload["factestio.gamma"] = function()
+      local helper = require("src.helpers")
+      return {
+        root = {
+          test = function() end,
+          helper_marker = helper.marker,
+        },
+      }
+    end
+
+    F.load()
+
+    assert.is_truthy(F.registry["gamma.root"])
+    assert.equal("target-mod-helper", F.registry["gamma.root"].helper_marker)
+
+    package.preload["__demo-mod__.src.helpers"] = nil
+    package.preload["factestio.gamma"] = nil
   end)
 end)

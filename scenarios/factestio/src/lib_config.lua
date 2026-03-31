@@ -20,6 +20,7 @@ return function(F)
     F.SAVES = F.ROOT .. "saves"
     F.TEST_NAME_FILE = F.ROOT .. "scenarios/factestio/test_name.lua"
     F.TEST_FILES_MANIFEST = F.ROOT .. "scenarios/factestio/test_files.lua"
+    F.TEST_CONTEXT_MANIFEST = F.ROOT .. "scenarios/factestio/test_context.lua"
     F.DONE_FILE = F.SCRIPT_OUTPUT .. "factestio.done"
     F.TEST_STDOUT = F.SCRIPT_OUTPUT .. "factestio.stdout"
     F.TEST_STDERR = F.SCRIPT_OUTPUT .. "factestio.stderr"

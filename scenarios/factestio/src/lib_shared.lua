@@ -1,6 +1,34 @@
 return function(F)
   local Node = require(F.LOAD_PATH_PREFIX .. "src.node")
 
+  local function read_mod_name_from_info(mod_dir)
+    local info_path = mod_dir .. "info.json"
+    local f = io.open(info_path, "r")
+    if not f then
+      error("Error: could not read mod info from " .. info_path)
+    end
+
+    local content = f:read("*a")
+    f:close()
+
+    local mod_name = content and content:match('"name"%s*:%s*"([^"]+)"')
+    if not mod_name then
+      error("Error: could not determine mod name from " .. info_path)
+    end
+
+    return mod_name
+  end
+
+  local function write_lua_manifest(path, content)
+    local f, err = io.open(path, "w")
+    if not f then
+      error("Error: could not write manifest " .. path .. ": " .. (err or "unknown error"))
+    end
+
+    f:write(content)
+    f:close()
+  end
+
   -----------------------------------------------------------------------------
   function F.discovered_test_files(paths)
     local file_names = {}
@@ -17,6 +45,39 @@ return function(F)
   end
 
   -----------------------------------------------------------------------------
+  function F.write_test_context(mod_name)
+    write_lua_manifest(F.TEST_CONTEXT_MANIFEST, string.format("return {\n  mod_name = %q,\n}\n", mod_name))
+  end
+
+  -----------------------------------------------------------------------------
+  function F.require_test_file(file_name)
+    if _G.script == nil then
+      return require("factestio." .. file_name)
+    end
+
+    local context = require("test_context")
+    local real_require = require
+    local target_prefix = "__" .. context.mod_name .. "__."
+
+    local function sandbox_require(module_name)
+      if module_name:match("^src%.") or module_name:match("^test%.") then
+        return real_require(target_prefix .. module_name)
+      end
+      return real_require(module_name)
+    end
+
+    _G.require = sandbox_require
+    local ok, result = pcall(real_require, "factestio." .. file_name)
+    _G.require = real_require
+
+    if not ok then
+      error(result, 0)
+    end
+
+    return result
+  end
+
+  -----------------------------------------------------------------------------
   function F.load()
     local configuration = require("factestio.config")
     F.set_paths(configuration.os_paths)
@@ -25,12 +86,13 @@ return function(F)
     if _G.script == nil then
       file_names = F.discover_test_files()
       F.write_test_manifest(file_names)
+      F.write_test_context(read_mod_name_from_info(F.MOD_DIR))
     else
       file_names = require("test_files")
     end
 
     for _, file_name in ipairs(file_names) do
-      local scenarios_tbl = require("factestio." .. file_name)
+      local scenarios_tbl = F.require_test_file(file_name)
       -- Register with prefixed names, resolve from
       for name, config in pairs(scenarios_tbl) do
         local prefixed_name = file_name .. "." .. name

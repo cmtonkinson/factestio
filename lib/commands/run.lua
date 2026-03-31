@@ -25,6 +25,7 @@ function Command.run(root, mod_dir, data_path, debug, timeout)
   F.MOD_DIR = mod_dir
   F.ROOT = root
   F.TEST_FILES_MANIFEST = root .. "scenarios/factestio/test_files.lua"
+  F.TEST_CONTEXT_MANIFEST = root .. "scenarios/factestio/test_context.lua"
 
   F.load()
   F.init(root)
