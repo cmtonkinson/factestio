@@ -1,6 +1,6 @@
 rockspec_format = "3.0"
 package = "factestio"
-version = "0.0.14-0"
+version = "0.0.15-0"
 source = {
   url = "git+https://github.com/cmtonkinson/factestio.git",
 }
