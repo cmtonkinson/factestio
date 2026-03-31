@@ -1,12 +1,19 @@
+local Cli = require("lib.cli")
+
 describe("factestio --help", function()
   it("prints a real help screen", function()
-    local proc = io.popen("./bin/factestio --help 2>&1")
-    assert.is_truthy(proc)
+    local chunks = {}
+    local stream = {
+      write = function(_, chunk)
+        table.insert(chunks, chunk)
+      end,
+    }
 
-    local output = proc:read("*a")
-    local ok, _, code = proc:close()
+    Cli.write_help(stream, "0.0.19")
 
-    assert.is_true(ok == true or ok == 0 or code == 0)
+    local output = table.concat(chunks)
+
+    assert.matches("^factestio 0%.0%.19", output)
     assert.matches("Hierarchical scenario%-based test framework", output)
     assert.matches("Usage:%s+factestio %[%options%] %[%mod_dir%]", output)
     assert.matches("%-%-doctor", output)
