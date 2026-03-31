@@ -17,11 +17,18 @@ if [[ "$LUA_VERSION" != "Lua 5.2" ]]; then
   exit 1
 fi
 
+LUAROCKS_BIN=""
+if [[ -x "$HOME/.luaver/luarocks/3.9.2_5.2/bin/luarocks" ]]; then
+  LUAROCKS_BIN="$HOME/.luaver/luarocks/3.9.2_5.2/bin/luarocks"
+elif command -v luarocks &>/dev/null; then
+  LUAROCKS_BIN="$(command -v luarocks)"
+fi
+
 LUAROCKS_LUA_PATH=""
 LUAROCKS_LUA_CPATH=""
-if command -v luarocks &>/dev/null; then
-  LUAROCKS_LUA_PATH=$(luarocks path --lr-path 2>/dev/null || true)
-  LUAROCKS_LUA_CPATH=$(luarocks path --lr-cpath 2>/dev/null || true)
+if [[ -n "$LUAROCKS_BIN" ]]; then
+  LUAROCKS_LUA_PATH=$("$LUAROCKS_BIN" path --lr-path 2>/dev/null || true)
+  LUAROCKS_LUA_CPATH=$("$LUAROCKS_BIN" path --lr-cpath 2>/dev/null || true)
 fi
 
 if [[ -n "$LUAROCKS_LUA_PATH" ]]; then

@@ -317,12 +317,20 @@ if args.on then
     -- 6. Create symlinks
     local mods_link = detected_data .. "mods/factestio"
     local mods_target = symlink_target(mods_link)
+    local abs_mods_target = mods_target and realpath(mods_target) or nil
+    local abs_expected_root = realpath(FACTESTIO_ROOT:gsub("/$", "")) or FACTESTIO_ROOT:gsub("/$", "")
     if mods_target then
-      if not quiet then
+      if abs_mods_target ~= abs_expected_root then
+        os.execute("rm " .. F.shell_quote(mods_link))
+        os.execute("ln -sf " .. F.shell_quote(abs_expected_root) .. " " .. F.shell_quote(mods_link))
+        if not quiet then
+          print("Updated mod symlink: " .. mods_link .. " -> " .. abs_expected_root)
+        end
+      elseif not quiet then
         print("Mod symlink already exists: " .. mods_link)
       end
     else
-      os.execute("ln -sf " .. F.shell_quote(FACTESTIO_ROOT:gsub("/$", "")) .. " " .. F.shell_quote(mods_link))
+      os.execute("ln -sf " .. F.shell_quote(abs_expected_root) .. " " .. F.shell_quote(mods_link))
       if not quiet then
         print("Created mod symlink: " .. mods_link)
       end
