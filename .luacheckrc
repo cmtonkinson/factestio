@@ -15,6 +15,14 @@ files["scenarios/factestio/src/lib_sandboxed.lua"] = {
     "serpent", "defines",
   }
 }
+files["scenarios/factestio/factestio/*.lua"] = {
+  globals = {
+    "settings",
+  },
+  read_globals = {
+    "defines",
+  },
+}
 
 -- Ignore generated/result directories
 exclude_files = { "tmp/**", "results/**", ".luarocks/**" }
