@@ -414,7 +414,8 @@ if args.on then
       end
 
       local tmp_save_name = "factestio-root-save-init"
-      local tmp_save_path = detected_data .. "saves/" .. tmp_save_name .. ".zip"
+      local tmp_save_base = detected_data .. "saves/" .. tmp_save_name
+      local tmp_save_path = tmp_save_base .. ".zip"
       local map_gen = FACTESTIO_ROOT .. "map-gen-settings.json"
       local stdout_log = FACTESTIO_ROOT .. "tmp/setup-stdout.txt"
       os.execute("mkdir -p " .. shell_quote(FACTESTIO_ROOT .. "tmp"))
@@ -423,7 +424,7 @@ if args.on then
       local create_cmd = string.format(
         '"%s" --create "%s" --map-gen-settings "%s" --disable-audio --nogamepad > "%s" 2>&1',
         guessed_binary,
-        tmp_save_name,
+        tmp_save_base,
         map_gen,
         stdout_log
       )
