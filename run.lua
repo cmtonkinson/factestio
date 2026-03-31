@@ -1,9 +1,7 @@
 #!/usr/bin/env lua
 
-local F = require("scenarios.factestio.src.lib")
-
 -- Verify required rocks are installed
-local required_rocks = { "argparse", "cjson" }
+local required_rocks = { "argparse" }
 local missing = {}
 for _, rock in ipairs(required_rocks) do
   if not pcall(require, rock) then
@@ -17,7 +15,6 @@ if #missing > 0 then
 end
 
 local argparse = require("argparse")
-local cjson = require("cjson")
 local os = require("os")
 
 -----------------------------------------------------------------------------
@@ -30,6 +27,23 @@ local function ensure_trailing_slash(path)
 end
 
 -----------------------------------------------------------------------------
+local function shell_quote(s)
+  return "'" .. tostring(s):gsub("'", "'\\''") .. "'"
+end
+
+-----------------------------------------------------------------------------
+local function command_succeeds(cmd)
+  local ok, _, code = os.execute(cmd)
+  if type(ok) == "number" then
+    return ok == 0
+  end
+  if ok == true then
+    return true
+  end
+  return code == 0
+end
+
+-----------------------------------------------------------------------------
 -- Resolve FACTESTIO_ROOT (set by bin/factestio wrapper)
 local FACTESTIO_ROOT = ensure_trailing_slash(os.getenv("FACTESTIO_ROOT") or "./")
 
@@ -39,10 +53,11 @@ local VERSION = "unknown"
 do
   local f = io.open(FACTESTIO_ROOT .. "info.json", "r")
   if f then
-    local ok, info = pcall(cjson.decode, f:read("*a"))
+    local content = f:read("*a")
     f:close()
-    if ok and info and info.version then
-      VERSION = info.version
+    local version = content and content:match('"version"%s*:%s*"([^"]+)"')
+    if version then
+      VERSION = version
     end
   end
 end
@@ -70,56 +85,6 @@ local args = parser:parse()
 local mod_dir = ensure_trailing_slash(args.mod_dir or "./")
 
 -----------------------------------------------------------------------------
--- Helper: read mod-list.json
-local function read_mod_list(data_path)
-  local path = data_path .. "mods/mod-list.json"
-  local f = io.open(path, "r")
-  if not f then
-    return nil, path
-  end
-  local content = f:read("*a")
-  f:close()
-  return cjson.decode(content), path
-end
-
--- Helper: write mod-list.json
-local function write_mod_list(path, data)
-  local f, err = io.open(path, "w")
-  if not f then
-    io.stderr:write("Error: could not write mod-list.json at " .. path .. ": " .. (err or "unknown error") .. "\n")
-    os.exit(1)
-  end
-  f:write(cjson.encode(data))
-  f:close()
-end
-
--- Helper: set mod enabled state
-local function set_mod_enabled(data_path, enabled, quiet)
-  local mod_list, path = read_mod_list(data_path)
-  if not mod_list then
-    io.stderr:write("Warning: mod-list.json not found at " .. path .. "\n")
-    return
-  end
-  for _, mod in ipairs(mod_list.mods) do
-    if mod.name == "factestio" then
-      if mod.enabled ~= enabled then
-        mod.enabled = enabled
-        write_mod_list(path, mod_list)
-        if not quiet then
-          print("factestio " .. (enabled and "enabled in mod-list.json" or "disabled in mod-list.json"))
-        end
-      end
-      return
-    end
-  end
-  -- not in list, add it
-  table.insert(mod_list.mods, { name = "factestio", enabled = enabled })
-  write_mod_list(path, mod_list)
-  if not quiet then
-    print("factestio " .. (enabled and "enabled" or "disabled") .. " in mod-list.json")
-  end
-end
-
 -- Helper: file/dir exists
 local function exists(path)
   local f = io.open(path, "r")
@@ -130,9 +95,66 @@ local function exists(path)
   return false
 end
 
+-----------------------------------------------------------------------------
+-- Helper: read mod-list.json
+local function read_mod_list(data_path)
+  local path = data_path .. "mods/mod-list.json"
+  if not exists(path) then
+    return nil, path
+  end
+  return true, path
+end
+
+-- Helper: set mod enabled state
+local function set_mod_enabled(data_path, enabled, quiet)
+  local mod_list_exists, path = read_mod_list(data_path)
+  if not mod_list_exists then
+    io.stderr:write("Warning: mod-list.json not found at " .. path .. "\n")
+    return
+  end
+  local enabled_literal = enabled and "true" or "false"
+  local tmp_path = path .. ".tmp"
+  local jq_filter = string.format(
+    "(.mods //= []) | "
+      .. '(if any(.mods[]?; .name == "factestio") '
+      .. 'then .mods |= map(if .name == "factestio" then .enabled = %s else . end) '
+      .. 'else .mods += [{"name":"factestio","enabled":%s}] end)',
+    enabled_literal,
+    enabled_literal
+  )
+  local cmd = string.format(
+    "jq %s %s > %s && mv %s %s",
+    shell_quote(jq_filter),
+    shell_quote(path),
+    shell_quote(tmp_path),
+    shell_quote(tmp_path),
+    shell_quote(path)
+  )
+  if not command_succeeds(cmd) then
+    io.stderr:write("Error: could not update mod-list.json at " .. path .. "\n")
+    os.exit(1)
+  end
+  if not quiet then
+    print("factestio " .. (enabled and "enabled" or "disabled") .. " in mod-list.json")
+  end
+end
+
+-- Helper: check if the mod is enabled in mod-list.json
+local function mod_enabled(data_path)
+  local _, path = read_mod_list(data_path)
+  if not path or not exists(path) then
+    return false
+  end
+  local cmd = string.format(
+    "jq -e '.mods[]? | select(.name == \"factestio\" and .enabled == true)' %s >/dev/null 2>&1",
+    shell_quote(path)
+  )
+  return command_succeeds(cmd)
+end
+
 -- Helper: is symlink pointing to target
 local function symlink_target(path)
-  local f = io.popen("readlink " .. F.shell_quote(path) .. " 2>/dev/null")
+  local f = io.popen("readlink " .. shell_quote(path) .. " 2>/dev/null")
   local result = f:read("*a"):gsub("\n$", "")
   f:close()
   return result ~= "" and result or nil
@@ -140,7 +162,7 @@ end
 
 -- Helper: resolve absolute path
 local function realpath(path)
-  local f = io.popen("cd " .. F.shell_quote(path) .. " 2>/dev/null && pwd")
+  local f = io.popen("cd " .. shell_quote(path) .. " 2>/dev/null && pwd")
   local result = f:read("*a"):gsub("\n$", "")
   f:close()
   return result ~= "" and result or nil
@@ -259,7 +281,7 @@ if args.on then
   -- 1. Scaffold factestio/ in mod project
   local factestio_dir = mod_dir .. "factestio"
   if not realpath(factestio_dir) then
-    os.execute("mkdir -p " .. F.shell_quote(factestio_dir))
+    os.execute("mkdir -p " .. shell_quote(factestio_dir))
     if not quiet then
       print("Created directory: " .. factestio_dir)
     end
@@ -291,7 +313,7 @@ if args.on then
   local example_dst = factestio_dir .. "/example.lua"
   if not already_initialized and not exists(example_dst) then
     local example_src = FACTESTIO_ROOT .. "factestio/example.lua"
-    os.execute("cp " .. F.shell_quote(example_src) .. " " .. F.shell_quote(example_dst))
+    os.execute("cp " .. shell_quote(example_src) .. " " .. shell_quote(example_dst))
     if not quiet then
       print("Created: " .. example_dst)
     end
@@ -330,7 +352,7 @@ if args.on then
         print("Mod symlink already exists: " .. mods_link)
       end
     else
-      os.execute("ln -sf " .. F.shell_quote(abs_expected_root) .. " " .. F.shell_quote(mods_link))
+      os.execute("ln -sf " .. shell_quote(abs_expected_root) .. " " .. shell_quote(mods_link))
       if not quiet then
         print("Created mod symlink: " .. mods_link)
       end
@@ -349,7 +371,7 @@ if args.on then
         print("factestio symlink already correct")
       end
     else
-      os.execute("ln -sf " .. F.shell_quote(abs_expected) .. " " .. F.shell_quote(link_path))
+      os.execute("ln -sf " .. shell_quote(abs_expected) .. " " .. shell_quote(link_path))
       if not quiet then
         print("Created symlink: " .. link_path .. " -> " .. abs_expected)
       end
@@ -366,7 +388,7 @@ if args.on then
       local tmp_save_path = detected_data .. "saves/" .. tmp_save_name .. ".zip"
       local map_gen = FACTESTIO_ROOT .. "map-gen-settings.json"
       local stdout_log = FACTESTIO_ROOT .. "tmp/setup-stdout.txt"
-      os.execute("mkdir -p " .. F.shell_quote(FACTESTIO_ROOT .. "tmp"))
+      os.execute("mkdir -p " .. shell_quote(FACTESTIO_ROOT .. "tmp"))
 
       -- --create generates a world and exits immediately — no timeout needed
       local create_cmd = string.format(
@@ -379,7 +401,7 @@ if args.on then
       local create_ok = os.execute(create_cmd)
 
       if create_ok and exists(tmp_save_path) then
-        os.execute("mv " .. F.shell_quote(tmp_save_path) .. " " .. F.shell_quote(root_save))
+        os.execute("mv " .. shell_quote(tmp_save_path) .. " " .. shell_quote(root_save))
         if not quiet then
           print("Created root-save.zip")
         end
@@ -412,7 +434,7 @@ if args.off then
   local link_path = FACTESTIO_ROOT .. "scenarios/factestio/factestio"
   local target = symlink_target(link_path)
   if target then
-    os.execute("rm " .. F.shell_quote(link_path))
+    os.execute("rm " .. shell_quote(link_path))
     if not quiet then
       print("Removed symlink: " .. link_path)
     end
@@ -423,7 +445,7 @@ if args.off then
     local mods_link = data_path .. "mods/factestio"
     local mods_target = symlink_target(mods_link)
     if mods_target then
-      os.execute("rm " .. F.shell_quote(mods_link))
+      os.execute("rm " .. shell_quote(mods_link))
       if not quiet then
         print("Removed mod symlink: " .. mods_link)
       end
@@ -443,21 +465,19 @@ end
 if data_path then
   verify_factestio_mod_root(data_path)
 
-  local mod_list = read_mod_list(data_path)
-  if mod_list then
-    local enabled = false
-    for _, mod in ipairs(mod_list.mods) do
-      if mod.name == "factestio" and mod.enabled then
-        enabled = true
-        break
-      end
-    end
-    if not enabled then
-      io.stderr:write("Warning: factestio is not enabled in mod-list.json. Run `factestio --on` first.\n")
-    end
+  if not mod_enabled(data_path) then
+    io.stderr:write("Warning: factestio is not enabled in mod-list.json. Run `factestio --on` first.\n")
   end
 end
 
+-- From here on we need the full local runtime stack, including cjson.
+if not pcall(require, "cjson") then
+  io.stderr:write("Error: missing required Lua rocks: cjson\n")
+  io.stderr:write("Run: luarocks install --deps-only factestio-*.rockspec\n")
+  os.exit(1)
+end
+
+local F = require("scenarios.factestio.src.lib")
 F.DEBUG = args.debug
 F.TEST_TIMEOUT = args.timeout
 F.MOD_DIR = mod_dir
