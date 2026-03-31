@@ -15,11 +15,4 @@ function Node:add(child)
   table.insert(self.children, child)
 end
 
-function Node:walk(f)
-  f(self)
-  for _, child in ipairs(self.children) do
-    child:walk(f)
-  end
-end
-
 return Node

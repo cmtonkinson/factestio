@@ -21,11 +21,17 @@ local cjson = require("cjson")
 local os = require("os")
 
 -----------------------------------------------------------------------------
--- Resolve FACTESTIO_ROOT (set by bin/factestio wrapper)
-local FACTESTIO_ROOT = os.getenv("FACTESTIO_ROOT") or "./"
-if FACTESTIO_ROOT:sub(-1) ~= "/" then
-  FACTESTIO_ROOT = FACTESTIO_ROOT .. "/"
+-- Ensure a path ends with exactly one trailing slash
+local function ensure_trailing_slash(path)
+  if path:sub(-1) ~= "/" then
+    return path .. "/"
+  end
+  return path
 end
+
+-----------------------------------------------------------------------------
+-- Resolve FACTESTIO_ROOT (set by bin/factestio wrapper)
+local FACTESTIO_ROOT = ensure_trailing_slash(os.getenv("FACTESTIO_ROOT") or "./")
 
 -----------------------------------------------------------------------------
 -- Read version from info.json
@@ -61,10 +67,7 @@ parser:argument("mod_dir"):description("Mod project directory (default: current 
 local args = parser:parse()
 
 -- Normalize mod_dir
-local mod_dir = args.mod_dir or "./"
-if mod_dir:sub(-1) ~= "/" then
-  mod_dir = mod_dir .. "/"
-end
+local mod_dir = ensure_trailing_slash(args.mod_dir or "./")
 
 -----------------------------------------------------------------------------
 -- Helper: read mod-list.json
@@ -161,10 +164,7 @@ end
 
 local data_path = nil
 if configuration and configuration.os_paths and configuration.os_paths.data then
-  data_path = configuration.os_paths.data
-  if data_path:sub(-1) ~= "/" then
-    data_path = data_path .. "/"
-  end
+  data_path = ensure_trailing_slash(configuration.os_paths.data)
 end
 
 -----------------------------------------------------------------------------

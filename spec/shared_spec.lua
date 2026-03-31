@@ -25,7 +25,7 @@ describe("F.set_paths", function()
 
   it("does not double-slash when cfg.data already has trailing slash", function()
     F.set_paths({ data = "/opt/factorio/data/" })
-    assert.equal("/opt/factorio/data//", F.FACTORIO_DATA_PATH)
+    assert.equal("/opt/factorio/data/", F.FACTORIO_DATA_PATH)
   end)
 
   it("does not change FACTORIO_BINARY when cfg.binary absent", function()
@@ -169,12 +169,45 @@ describe("F.fully_qualified_name", function()
   end)
 end)
 
+describe("F.ensure_trailing_slash", function()
+  it("adds a slash when path has no trailing slash", function()
+    assert.equal("/foo/bar/", F.ensure_trailing_slash("/foo/bar"))
+  end)
+
+  it("does not double-slash when path already has trailing slash", function()
+    assert.equal("/foo/bar/", F.ensure_trailing_slash("/foo/bar/"))
+  end)
+
+  it("handles a bare slash", function()
+    assert.equal("/", F.ensure_trailing_slash("/"))
+  end)
+end)
+
+describe("F.safe_save_name", function()
+  it("returns name unchanged when no dots present", function()
+    assert.equal("setup", F.safe_save_name("setup"))
+  end)
+
+  it("replaces a single dot with a hyphen", function()
+    assert.equal("example-setup", F.safe_save_name("example.setup"))
+  end)
+
+  it("replaces multiple dots with hyphens", function()
+    assert.equal("a-b-c", F.safe_save_name("a.b.c"))
+  end)
+end)
+
 describe("F.save_name", function()
   it("returns correct path for a node named 'test' with FQN 'example.test'", function()
     local parent = Node.new("example", { name = "example" })
     local child = Node.new("test", { name = "test" })
     parent:add(child)
     assert.equal("results/example.test/factestio-test.zip", F.save_name(child))
+  end)
+
+  it("sanitizes dots in node name for the zip filename", function()
+    local node = Node.new("example.setup", { name = "example.setup" })
+    assert.equal("results/example.setup/factestio-example-setup.zip", F.save_name(node))
   end)
 end)
 

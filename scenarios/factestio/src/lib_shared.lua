@@ -24,13 +24,21 @@ return function(F)
   end
 
   -----------------------------------------------------------------------------
+  function F.ensure_trailing_slash(path)
+    if path:sub(-1) ~= "/" then
+      return path .. "/"
+    end
+    return path
+  end
+
+  -----------------------------------------------------------------------------
   function F.set_paths(cfg)
     assert(type(cfg) == "table", "Factestio.config: cfg must be a table")
     if cfg.binary then
       F.FACTORIO_BINARY = cfg.binary
     end
     if cfg.data then
-      F.FACTORIO_DATA_PATH = cfg.data .. "/"
+      F.FACTORIO_DATA_PATH = F.ensure_trailing_slash(cfg.data)
     end
   end
 
@@ -114,7 +122,7 @@ return function(F)
       F.registry[name] = Node.new(name, d)
     end
 
-    -- Second pass: Link parent/child relationsips.
+    -- Second pass: Link parent/child relationships.
     for name, node in pairs(F.registry) do
       local data = node.data
       if data.from then
@@ -126,6 +134,13 @@ return function(F)
         node.root = true
         table.insert(roots, node)
       end
+    end
+
+    -- Third pass: Sort children of every node for deterministic execution order.
+    for _, node in pairs(F.registry) do
+      table.sort(node.children, function(a, b)
+        return a.data.name < b.data.name
+      end)
     end
 
     -- Third pass: detect cycles
@@ -160,18 +175,6 @@ return function(F)
 
     -- Return DAG roots.
     return roots
-  end
-
-  -----------------------------------------------------------------------------
-  function F.get_current_test_name()
-    local f = io.open(F.TEST_NAME_FILE, "r")
-    if f then
-      local name = f:read("*a")
-      f:close()
-      return name
-    else
-      return nil
-    end
   end
 
   -----------------------------------------------------------------------------

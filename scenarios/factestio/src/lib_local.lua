@@ -29,9 +29,8 @@ return function(F)
     local d = depth or 0
     local indent = string.rep(" ", d * 2)
     -- Do the thing.
-    F.start_factorio(node, depth)
-    if node.data.timeout then -- luacheck: ignore 542
-    else
+    F.start_factorio(node)
+    if not node.data.timeout then
       -- Check the results of the test.
       local file = io.open(node.results_file, "r")
       if not file then
@@ -65,21 +64,14 @@ return function(F)
       return
     end
 
-    -- Recursively call the children in deterministic order.
-    local sorted_children = {}
+    -- Recursively call the children (already sorted at compile time).
     for _, child in ipairs(node.children) do
-      table.insert(sorted_children, child)
-    end
-    table.sort(sorted_children, function(a, b)
-      return a.data.name < b.data.name
-    end)
-    for _, child in ipairs(sorted_children) do
       F.exec(child, depth + 1)
     end
   end
 
   -----------------------------------------------------------------------------
-  function F.start_factorio(node, depth) -- luacheck: ignore 212
+  function F.start_factorio(node)
     -- Build the Factorio launch command.
     -- Root tests (no parent): start a fresh world from the scenario on disk.
     -- Child tests (has parent): restore the parent's saved world state from zip.
@@ -104,7 +96,7 @@ return function(F)
       end
       -- Overwrite test_name.lua inside the zip so control.lua require()s the
       -- right name when Factorio loads the save.
-      F.cmd(
+      local zip_ok = F.cmd(
         "python3 -c '"
           .. "import zipfile, sys, os; "
           .. 'src = sys.argv[1]; tmp = src + ".tmp"; name = sys.argv[2]; '
@@ -116,6 +108,9 @@ return function(F)
         child_zip,
         node.data.name
       )
+      if not zip_ok then
+        error("Failed to inject test name into child zip: " .. child_zip)
+      end
       load_arg = string.format('--start-server "%s"', "factestio-child-load")
     end
 
