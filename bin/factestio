@@ -57,6 +57,9 @@ export LUA_PATH="$FACTESTIO_ROOT/?.lua;$FACTESTIO_ROOT/?/init.lua;./?.lua;./?/in
 export LUA_CPATH="${LUAROCKS_LUA_CPATH}${LUA_CPATH:-}"
 
 mkdir -p "$FACTESTIO_ROOT/tmp"
+INTERRUPT_FILE="$FACTESTIO_ROOT/tmp/factestio.interrupt"
+rm -f "$INTERRUPT_FILE"
+INTERRUPT_COUNT=0
 
 _factestio_cleanup() {
   local pid_file="$FACTESTIO_ROOT/tmp/factestio.pid"
@@ -67,6 +70,22 @@ _factestio_cleanup() {
     rm -f "$pid_file"
   fi
 }
-trap '_factestio_cleanup' INT TERM
 
-exec lua "$FACTESTIO_ROOT/lib/main.lua" "$@"
+_factestio_interrupt() {
+  INTERRUPT_COUNT=$((INTERRUPT_COUNT + 1))
+  if [[ "$INTERRUPT_COUNT" -eq 1 ]]; then
+    : > "$INTERRUPT_FILE"
+    printf 'Interrupt received. Waiting for the current scenario to finish; press Ctrl+C again to force stop.\n' >&2
+    return
+  fi
+
+  _factestio_cleanup
+  exit 130
+}
+
+trap '_factestio_interrupt' INT TERM
+
+lua "$FACTESTIO_ROOT/lib/main.lua" "$@"
+status=$?
+rm -f "$INTERRUPT_FILE"
+exit "$status"

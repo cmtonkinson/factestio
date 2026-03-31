@@ -11,6 +11,17 @@ return function(F)
   F.had_failures = false
 
   -----------------------------------------------------------------------------
+  function F.interrupt_requested()
+    local path = F.ROOT .. Constants.FACTESTIO.TMP_INTERRUPT_FILE
+    local f = io.open(path, "r")
+    if f then
+      f:close()
+      return true
+    end
+    return false
+  end
+
+  -----------------------------------------------------------------------------
   function F.discover_test_files()
     assert(type(F.MOD_DIR) == "string" and F.MOD_DIR ~= "", "F.MOD_DIR must be set before loading tests")
 
@@ -52,9 +63,13 @@ return function(F)
     -- Clean up results from the last run.
     F.cmd('rm -rf "%s"', results_dir)
     F.cmd('mkdir -p "%s"', results_dir)
+    os.remove(F.ROOT .. Constants.FACTESTIO.TMP_INTERRUPT_FILE)
     -- Kick off the root scenarios.
     F.start_time = os.time()
     for _, root in ipairs(roots) do
+      if F.interrupt_requested() then
+        break
+      end
       F.exec(root, 0)
     end
     F.end_time = os.time()
@@ -115,6 +130,9 @@ return function(F)
 
     -- Recursively call the children (already sorted at compile time).
     for _, child in ipairs(node.children) do
+      if F.interrupt_requested() then
+        return
+      end
       F.exec(child, depth + 1)
     end
   end

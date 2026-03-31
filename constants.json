@@ -19,7 +19,8 @@
     "server_settings_file": "server-settings.json",
     "map_gen_settings_file": "map-gen-settings.json",
     "tmp_pid_file": "tmp/factestio.pid",
-    "tmp_setup_stdout": "tmp/setup-stdout.txt"
+    "tmp_setup_stdout": "tmp/setup-stdout.txt",
+    "tmp_interrupt_file": "tmp/factestio.interrupt"
   },
   "scheduler": {
     "run_tick_offset": 10,

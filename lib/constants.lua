@@ -33,6 +33,7 @@ local Constants = {
     MAP_GEN_SETTINGS_FILE = decoded.factestio.map_gen_settings_file,
     TMP_PID_FILE = decoded.factestio.tmp_pid_file,
     TMP_SETUP_STDOUT = decoded.factestio.tmp_setup_stdout,
+    TMP_INTERRUPT_FILE = decoded.factestio.tmp_interrupt_file,
   },
   SCHEDULER = {
     RUN_TICK_OFFSET = decoded.scheduler.run_tick_offset,
