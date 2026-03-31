@@ -2,7 +2,7 @@ return function(F)
   -- Since this code isn't running within Factorio, we can use whatever libraries
   -- and OS calls we want
   local io = require("io")
-  local json = require("cjson")
+  local json = require("lib.factestio_json")
   local os = require("os")
 
   F.start_time = 0
@@ -77,7 +77,7 @@ return function(F)
         error("Error: Could not read results file " .. node.results_file)
       end
       file:close()
-      local parsed = json.decode(content)
+      local parsed = json.decode(content, node.results_file)
       -- Overwrite the Node data with anything in the results file.
       for k, v in pairs(parsed) do
         node.data[k] = v

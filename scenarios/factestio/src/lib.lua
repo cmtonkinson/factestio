@@ -4,7 +4,7 @@
 -- scripts, we need to be able to run this logic both within the context of
 -- the Factorio scenario and from the outside world. That means specifically:
 --   * the apparent path to required files will change
---   * external libraries (io, cjson, etc.) can't be loaded inside Factorio
+--   * external libraries (io, JSON libs, etc.) can't be loaded inside Factorio
 --
 -- But the annoyance doesn't stop there - most of this logic is executed N+1
 -- times per test suite invocation. We first have to analyze the tests that are

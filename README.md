@@ -28,7 +28,7 @@ brew install cmtonkinson/tap/factestio
 Then install the Lua dependencies:
 
 ```bash
-luarocks install --deps-only factestio-0.1-0.rockspec
+luarocks install --deps-only factestio-*.rockspec
 ```
 
 ## Setup
@@ -71,6 +71,12 @@ Or with options:
 factestio --debug --timeout 15 /path/to/mod/project
 ```
 
+To validate your shell/runtime setup before running tests:
+
+```bash
+factestio --doctor
+```
+
 ## Disabling
 
 ```bash
@@ -83,11 +89,14 @@ This removes symlinks and disables factestio in `mod-list.json`.
 
 | Flag | Description |
 |------|-------------|
+| `-h, --help` | Show command help |
 | `--on` | Enable factestio for this mod project (symlink, mod-list, scaffold) |
 | `--off` | Disable factestio for this mod project |
 | `-q, --quiet` | Suppress informational output (use with `--on`/`--off`) |
 | `-d, --debug` | Run in debug mode |
 | `-t, --timeout N` | Timeout for each scenario in seconds (default: 8) |
+| `--doctor` | Validate the Lua 5.2 + LuaRocks environment |
+| `-V, --version` | Print the installed factestio version |
 | `mod_dir` | Mod project directory (default: current directory) |
 
 ## The `factestio/` directory

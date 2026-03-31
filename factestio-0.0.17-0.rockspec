@@ -11,7 +11,7 @@ description = {
 dependencies = {
   "argparse >= 0.7.1",
   "lua >= 5.2, < 5.3",
-  "lua-cjson >= 2.1.0",
+  "dkjson >= 2.8",
   "serpent >= 0.30-2",
 }
 test_dependencies = {
