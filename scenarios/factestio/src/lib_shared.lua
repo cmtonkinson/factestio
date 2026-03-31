@@ -70,8 +70,15 @@ return function(F)
   end
 
   -----------------------------------------------------------------------------
+  -- Factorio treats dots in save names as file extensions and truncates them.
+  -- Replace dots with hyphens so "example.setup" → "example-setup".
+  function F.safe_save_name(name)
+    return name:gsub("%.", "-")
+  end
+
+  -----------------------------------------------------------------------------
   function F.save_name(node)
-    return "results/" .. F.fully_qualified_name(node) .. "/factestio-" .. node.data.name .. ".zip"
+    return "results/" .. F.fully_qualified_name(node) .. "/factestio-" .. F.safe_save_name(node.data.name) .. ".zip"
   end
 
   -----------------------------------------------------------------------------

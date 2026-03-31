@@ -12,7 +12,7 @@ for _, rock in ipairs(required_rocks) do
 end
 if #missing > 0 then
   io.stderr:write("Error: missing required Lua rocks: " .. table.concat(missing, ", ") .. "\n")
-  io.stderr:write("Run: luarocks install --deps-only factestio-0.1-0.rockspec\n")
+  io.stderr:write("Run: luarocks install --deps-only factestio-*.rockspec\n")
   os.exit(1)
 end
 
@@ -272,6 +272,45 @@ if args.on then
       os.execute("ln -sf " .. F.shell_quote(abs_expected) .. " " .. F.shell_quote(link_path))
       if not quiet then
         print("Created symlink: " .. link_path .. " -> " .. abs_expected)
+      end
+    end
+
+    -- 6. Generate root-save.zip using Factorio's --create mode (no scenario Lua needed)
+    local root_save = FACTESTIO_ROOT .. "root-save.zip"
+    if not exists(root_save) then
+      if not quiet then
+        print("Generating root-save.zip (this may take a moment)...")
+      end
+
+      local tmp_save_name = "factestio-root-save-init"
+      local tmp_save_path = detected_data .. "saves/" .. tmp_save_name .. ".zip"
+      local map_gen = FACTESTIO_ROOT .. "map-gen-settings.json"
+      local stdout_log = FACTESTIO_ROOT .. "tmp/setup-stdout.txt"
+      os.execute("mkdir -p " .. F.shell_quote(FACTESTIO_ROOT .. "tmp"))
+
+      -- --create generates a world and exits immediately — no timeout needed
+      local create_cmd = string.format(
+        '"%s" --create "%s" --map-gen-settings "%s" --disable-audio --nogamepad > "%s" 2>&1',
+        guessed_binary,
+        tmp_save_name,
+        map_gen,
+        stdout_log
+      )
+      local create_ok = os.execute(create_cmd)
+
+      if create_ok and exists(tmp_save_path) then
+        os.execute("mv " .. F.shell_quote(tmp_save_path) .. " " .. F.shell_quote(root_save))
+        if not quiet then
+          print("Created root-save.zip")
+        end
+      else
+        io.stderr:write("Warning: Factorio --create failed to produce a save.\n")
+        io.stderr:write("Check " .. stdout_log .. " for details.\n")
+        io.stderr:write("You can retry with `factestio --on` after resolving the issue.\n")
+      end
+    else
+      if not quiet then
+        print("root-save.zip already exists")
       end
     end
   else

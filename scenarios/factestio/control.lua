@@ -42,7 +42,7 @@ script.on_event(defines.events.on_tick, function(event) -- luacheck: ignore 212
 
   -- Save
   elseif offset == 20 then
-    game.server_save("factestio-" .. this_test)
+    game.server_save("factestio-" .. f.safe_save_name(this_test))
 
   -- Exit
   elseif offset == 30 then

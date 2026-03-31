@@ -17,7 +17,7 @@ if [[ "$LUA_VERSION" != "Lua 5.2" ]]; then
   exit 1
 fi
 
-export LUA_PATH="$FACTESTIO_ROOT/?.lua;$FACTESTIO_ROOT/?/init.lua;./?.lua;./?/init.lua"
+export LUA_PATH="$FACTESTIO_ROOT/?.lua;$FACTESTIO_ROOT/?/init.lua;./?.lua;./?/init.lua;${LUA_PATH:-}"
 
 mkdir -p "$FACTESTIO_ROOT/tmp"
 

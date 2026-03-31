@@ -170,9 +170,9 @@ return function(F)
     -- Move artifacts into the per-test results subdirectory.
     local fqn = F.fully_qualified_name(node)
     local results_dir = "results/" .. fqn .. "/"
-    local save = F.FACTORIO_DATA_PATH .. "saves/factestio-" .. node.data.name .. ".zip"
+    local save = F.FACTORIO_DATA_PATH .. "saves/factestio-" .. F.safe_save_name(node.data.name) .. ".zip"
     F.cmd('mkdir -p "%s"', results_dir)
-    F.cmd('mv "%s" "%s"', save, results_dir .. "factestio-" .. node.data.name .. ".zip")
+    F.cmd('mv "%s" "%s"', save, results_dir .. "factestio-" .. F.safe_save_name(node.data.name) .. ".zip")
     F.cmd('mv "%s" "%s"', F.TEST_STDOUT, results_dir .. "stdout.txt")
     F.cmd('mv "%s" "%s"', F.TEST_STDERR, results_dir .. "stderr.txt")
     node.results_file = results_dir .. "results.json"

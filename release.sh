@@ -47,9 +47,30 @@ esac
 VERSION="v${MAJOR}.${MINOR}.${PATCH}"
 echo "Releasing $VERSION ..."
 
+# Bump version in info.json and rockspec before tagging
+VER="${VERSION#v}"
+python3 -c "
+import json, sys
+with open('info.json') as f: d = json.load(f)
+d['version'] = sys.argv[1]
+with open('info.json', 'w') as f: json.dump(d, f, indent=2)
+print('  info.json -> ' + sys.argv[1])
+" "$VER"
+
+ROCKSPEC_OLD="factestio-$(cat factestio-*.rockspec | grep '^version' | head -1 | grep -o '[0-9][^\"]*')-0.rockspec"
+ROCKSPEC_NEW="factestio-${VER}-0.rockspec"
+sed -i '' "s/^version = .*/version = \"${VER}-0\"/" "$ROCKSPEC_OLD"
+if [[ "$ROCKSPEC_OLD" != "$ROCKSPEC_NEW" ]]; then
+  git mv "$ROCKSPEC_OLD" "$ROCKSPEC_NEW"
+fi
+echo "  rockspec -> $ROCKSPEC_NEW"
+
+git add info.json "$ROCKSPEC_NEW"
+git commit -m "Release $VERSION"
+
 # Tag and push — GitHub Actions (or just the push) creates the release
 git tag "$VERSION"
-git push origin "$VERSION"
+git push origin main "$VERSION"
 
 # Create GitHub release from the tag
 gh release create "$VERSION" \
