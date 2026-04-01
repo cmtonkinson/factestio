@@ -13,7 +13,7 @@ function Cli.write_help(stream, version)
   stream:write("\n")
   stream:write("Commands:\n")
   stream:write(
-    "  --doctor        Validate the Lua " .. Constants.LUA.VERSION_MINOR .. " and LuaRocks shell environment\n"
+    "  doctor          Validate the Lua " .. Constants.LUA.VERSION_MINOR .. " and LuaRocks shell environment\n"
   )
   stream:write("  activate        Scaffold and activate factestio for the target mod project\n")
   stream:write("  deactivate      Restore the pre-activate mod-list state and remove factestio links\n")
@@ -35,7 +35,7 @@ function Cli.write_help(stream, version)
   stream:write("  mod_dir         Mod project directory (default: current directory)\n")
   stream:write("\n")
   stream:write("Examples:\n")
-  stream:write("  factestio --doctor\n")
+  stream:write("  factestio doctor\n")
   stream:write("  factestio activate /path/to/mod\n")
   stream:write("  factestio activate --keep-other-mods /path/to/mod\n")
   stream:write("  factestio --leaf basic.setup\n")
@@ -76,7 +76,7 @@ function Cli.parse(argv)
       return {
         action = "version",
       }
-    elseif current == "--doctor" then
+    elseif current == "doctor" then
       args.doctor = true
     elseif current == "activate" then
       args.activate = true
@@ -148,7 +148,7 @@ function Cli.parse(argv)
   end
 
   if (args.doctor and args.activate) or (args.doctor and args.deactivate) or (args.activate and args.deactivate) then
-    return parse_error("Error: --doctor, activate, and deactivate are mutually exclusive.\n", false)
+    return parse_error("Error: doctor, activate, and deactivate are mutually exclusive.\n", false)
   end
 
   if args.leaf and args.branch then

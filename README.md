@@ -109,7 +109,7 @@ If you omit `--seed`, factestio generates one and prints it so the run can be re
 To validate your shell/runtime setup before running tests:
 
 ```bash
-factestio --doctor
+factestio doctor
 ```
 
 ## Disabling
@@ -133,7 +133,7 @@ This removes the factestio/SUT symlinks and restores the pre-activation
 | `--branch ID` | Run the named scenario, its parents, and all children |
 | `--seed N` | Seed Lua `math.random` for reproducible test runs |
 | `-t, --timeout N` | Timeout for each scenario in seconds (default: 8) |
-| `--doctor` | Validate the Lua 5.2 + LuaRocks environment |
+| `doctor` | Validate the Lua 5.2 + LuaRocks environment |
 | `-V, --version` | Print the installed factestio version |
 | `mod_dir` | Mod project directory (default: current directory) |
 
