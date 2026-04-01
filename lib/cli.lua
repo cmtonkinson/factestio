@@ -15,6 +15,7 @@ function Cli.write_help(stream, version)
   stream:write(
     "  doctor          Validate the Lua " .. Constants.LUA.VERSION_MINOR .. " and LuaRocks shell environment\n"
   )
+  stream:write("  list            Show the compiled scenario DAG\n")
   stream:write("  activate        Scaffold and activate factestio for the target mod project\n")
   stream:write("  deactivate      Restore the pre-activate mod-list state and remove factestio links\n")
   stream:write("\n")
@@ -26,6 +27,9 @@ function Cli.write_help(stream, version)
   stream:write("  -t, --timeout N Set per-scenario timeout in seconds (default: 8)\n")
   stream:write("  -q, --quiet     Suppress informational output for activate and deactivate\n")
   stream:write("  --keep-other-mods  Keep other non-base mods enabled during activate\n")
+  stream:write("  --roots         With `list`, show only root scenarios\n")
+  stream:write("  --children ID   With `list`, show the named scenario and all descendants\n")
+  stream:write("  --json          Emit JSON for `list`\n")
   stream:write("\n")
   stream:write("General:\n")
   stream:write("  -h, --help      Show this help text\n")
@@ -36,6 +40,9 @@ function Cli.write_help(stream, version)
   stream:write("\n")
   stream:write("Examples:\n")
   stream:write("  factestio doctor\n")
+  stream:write("  factestio list\n")
+  stream:write("  factestio list --roots --json\n")
+  stream:write("  factestio list --children regressions.setup\n")
   stream:write("  factestio activate /path/to/mod\n")
   stream:write("  factestio activate --keep-other-mods /path/to/mod\n")
   stream:write("  factestio --leaf basic.setup\n")
@@ -53,9 +60,13 @@ end
 function Cli.parse(argv)
   local args = {
     doctor = false,
+    list = false,
     activate = false,
     deactivate = false,
     keep_other_mods = false,
+    json = false,
+    roots = false,
+    children = nil,
     quiet = false,
     debug = false,
     leaf = nil,
@@ -78,12 +89,25 @@ function Cli.parse(argv)
       }
     elseif current == "doctor" then
       args.doctor = true
+    elseif current == "list" then
+      args.list = true
     elseif current == "activate" then
       args.activate = true
     elseif current == "deactivate" then
       args.deactivate = true
     elseif current == "--keep-other-mods" then
       args.keep_other_mods = true
+    elseif current == "--json" then
+      args.json = true
+    elseif current == "--roots" then
+      args.roots = true
+    elseif current == "--children" then
+      i = i + 1
+      local value = argv[i]
+      if not value then
+        return parse_error(nil, true)
+      end
+      args.children = value
     elseif current == "-q" or current == "--quiet" then
       args.quiet = true
     elseif current == "-d" or current == "--debug" then
@@ -132,6 +156,8 @@ function Cli.parse(argv)
       if not args.seed then
         return parse_error("Error: seed must be a number.\n", false)
       end
+    elseif current:match("^%-%-children=") then
+      args.children = current:match("^%-%-children=(.+)$")
     elseif current:match("^%-%-leaf=") then
       args.leaf = current:match("^%-%-leaf=(.+)$")
     elseif current:match("^%-%-branch=") then
@@ -147,8 +173,21 @@ function Cli.parse(argv)
     i = i + 1
   end
 
-  if (args.doctor and args.activate) or (args.doctor and args.deactivate) or (args.activate and args.deactivate) then
-    return parse_error("Error: doctor, activate, and deactivate are mutually exclusive.\n", false)
+  local command_count = 0
+  if args.doctor then
+    command_count = command_count + 1
+  end
+  if args.list then
+    command_count = command_count + 1
+  end
+  if args.activate then
+    command_count = command_count + 1
+  end
+  if args.deactivate then
+    command_count = command_count + 1
+  end
+  if command_count > 1 then
+    return parse_error("Error: doctor, list, activate, and deactivate are mutually exclusive.\n", false)
   end
 
   if args.leaf and args.branch then
@@ -159,13 +198,31 @@ function Cli.parse(argv)
     return parse_error("Error: --keep-other-mods only applies to activate.\n", false)
   end
 
-  if (args.leaf or args.branch) and (args.activate or args.deactivate or args.doctor) then
+  if (args.leaf or args.branch) and (args.activate or args.deactivate or args.doctor or args.list) then
     return parse_error("Error: --leaf and --branch only apply to test runs.\n", false)
+  end
+
+  if (args.roots or args.children or args.json) and not args.list then
+    return parse_error("Error: --roots, --children, and --json only apply to list.\n", false)
+  end
+
+  if args.roots and args.children then
+    return parse_error("Error: --roots and --children are mutually exclusive.\n", false)
   end
 
   if args.doctor then
     return {
       action = "doctor",
+    }
+  end
+
+  if args.list then
+    return {
+      action = "list",
+      children = args.children,
+      json = args.json,
+      mod_dir = System.ensure_trailing_slash(args.mod_dir),
+      roots = args.roots,
     }
   end
 

@@ -4,6 +4,7 @@ local ActivateCommand = require("lib.commands.activate")
 local Cli = require("lib.cli")
 local DeactivateCommand = require("lib.commands.deactivate")
 local DoctorCommand = require("lib.commands.doctor")
+local ListCommand = require("lib.commands.list")
 local ProjectConfig = require("lib.project_config")
 local RunCommand = require("lib.commands.run")
 local System = require("lib.system")
@@ -52,6 +53,8 @@ if parsed.action == "activate" then
   exit_code, command_err = ActivateCommand.run(root, parsed.mod_dir, parsed.quiet, parsed.keep_other_mods)
 elseif parsed.action == "deactivate" then
   exit_code, command_err = DeactivateCommand.run(root, parsed.mod_dir, data_path, parsed.quiet)
+elseif parsed.action == "list" then
+  exit_code, command_err = ListCommand.run(root, parsed.mod_dir, parsed.roots, parsed.children, parsed.json)
 else
   exit_code, command_err = RunCommand.run(
     root,

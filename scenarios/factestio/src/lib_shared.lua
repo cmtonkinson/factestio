@@ -321,6 +321,35 @@ return function(F)
   end
 
   -----------------------------------------------------------------------------
+  function F.find_node(name)
+    return F.registry[name]
+  end
+
+  -----------------------------------------------------------------------------
+  function F.serialize_node(node)
+    local children = {}
+    for _, child in ipairs(node.children) do
+      children[#children + 1] = F.serialize_node(child)
+    end
+
+    return {
+      name = node.data.name,
+      children = children,
+    }
+  end
+
+  -----------------------------------------------------------------------------
+  function F.write_node_lines(stream, nodes, depth)
+    local d = depth or 0
+    local indent = string.rep(" ", d * 2)
+
+    for _, node in ipairs(nodes) do
+      stream:write(indent .. node.data.name .. "\n")
+      F.write_node_lines(stream, node.children, d + 1)
+    end
+  end
+
+  -----------------------------------------------------------------------------
   function F.select_roots(roots, mode, target_name)
     local included = {}
 

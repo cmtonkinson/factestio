@@ -10,4 +10,12 @@ function Json.decode(content, source)
   return decoded
 end
 
+function Json.encode(value)
+  local encoded, err = json.encode(value)
+  if err then
+    error(string.format("Error: could not encode JSON: %s", err))
+  end
+  return encoded
+end
+
 return Json

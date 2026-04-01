@@ -29,6 +29,18 @@ describe("Cli.parse", function()
     assert.is_nil(branch.leaf)
   end)
 
+  it("parses list selectors and json output", function()
+    local parsed = assert(Cli.parse({ "list", "--roots", "--json", "/tmp/mod" }))
+    local children = assert(Cli.parse({ "list", "--children", "alpha.setup", "/tmp/mod" }))
+
+    assert.equal("list", parsed.action)
+    assert.is_true(parsed.roots)
+    assert.is_true(parsed.json)
+    assert.is_nil(parsed.children)
+    assert.equal("list", children.action)
+    assert.equal("alpha.setup", children.children)
+  end)
+
   it("parses deactivate", function()
     local parsed = assert(Cli.parse({ "deactivate", "/tmp/mod" }))
 
@@ -48,5 +60,12 @@ describe("Cli.parse", function()
 
     assert.is_nil(parsed)
     assert.matches("mutually exclusive", err.message)
+  end)
+
+  it("rejects list-only flags outside list", function()
+    local parsed, err = Cli.parse({ "--roots" })
+
+    assert.is_nil(parsed)
+    assert.matches("only apply to list", err.message)
   end)
 end)

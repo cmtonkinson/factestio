@@ -96,6 +96,8 @@ Or with options:
 factestio --seed 12345 --debug --timeout 15 /path/to/mod/project
 factestio --leaf basic.setup
 factestio --branch regressions.setup
+factestio list --roots
+factestio list --children regressions.setup --json
 ```
 
 At startup factestio prints:
@@ -126,9 +128,13 @@ This removes the factestio/SUT symlinks and restores the pre-activation
 | `-h, --help` | Show command help |
 | `activate` | Scaffold and activate factestio for this mod project |
 | `deactivate` | Restore the original mod-list state and remove factestio links |
+| `list` | Show the compiled scenario DAG |
 | `--keep-other-mods` | Keep other non-base mods enabled during `activate` |
 | `-q, --quiet` | Suppress informational output (use with `activate`/`deactivate`) |
 | `-d, --debug` | Run in debug mode |
+| `--roots` | With `list`, show only root scenarios |
+| `--children ID` | With `list`, show the named scenario and all descendants |
+| `--json` | Emit JSON for `list` |
 | `--leaf ID` | Run only the named scenario and its parent chain |
 | `--branch ID` | Run the named scenario, its parents, and all children |
 | `--seed N` | Seed Lua `math.random` for reproducible test runs |
@@ -220,6 +226,21 @@ factestio --branch other_file.root_case
 
 `--leaf` runs just that scenario plus its parent chain. `--branch` runs that
 scenario, its parent chain, and all of its descendants.
+
+### Inspecting the DAG
+
+Use `list` to inspect the compiled scenario graph without running Factorio:
+
+```bash
+factestio list
+factestio list --roots
+factestio list --children my_tests.setup
+factestio list --children my_tests.setup --json
+```
+
+`list` prints the full compiled DAG. `--roots` limits output to root scenarios.
+`--children ID` prints the named scenario and all descendants. `--json` works
+with any `list` mode and emits machine-readable output.
 
 ### Assertions
 ```lua
