@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # NOTE: this script is non-portable / macOS-specific (mostly due to `sed`
-# syntax) so while Factestio is meant to offer Linux support, this maintainer
+# syntax) so while factestio is meant to offer Linux support, this maintainer
 # tooling makes no such effort at this time.
 
 HOMEBREW_TAP_DIR="${HOMEBREW_TAP_DIR:-$HOME/repo/homebrew-tap}"

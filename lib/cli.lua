@@ -15,18 +15,19 @@ function Cli.write_help(stream, version)
   stream:write(
     "  --doctor        Validate the Lua " .. Constants.LUA.VERSION_MINOR .. " and LuaRocks shell environment\n"
   )
-  stream:write("  activate        Scaffold and activate Factestio for the target mod project\n")
-  stream:write("  deactivate      Restore the pre-activate mod-list state and remove Factestio links\n")
+  stream:write("  activate        Scaffold and activate factestio for the target mod project\n")
+  stream:write("  deactivate      Restore the pre-activate mod-list state and remove factestio links\n")
   stream:write("\n")
   stream:write("Run Options:\n")
   stream:write("  -d, --debug     Print debug output while running tests\n")
+  stream:write("  --seed N        Seed Lua math.random for reproducible test runs\n")
   stream:write("  -t, --timeout N Set per-scenario timeout in seconds (default: 8)\n")
   stream:write("  -q, --quiet     Suppress informational output for activate and deactivate\n")
   stream:write("  --keep-other-mods  Keep other non-base mods enabled during activate\n")
   stream:write("\n")
   stream:write("General:\n")
   stream:write("  -h, --help      Show this help text\n")
-  stream:write("  -V, --version   Print the Factestio version\n")
+  stream:write("  -V, --version   Print the factestio version\n")
   stream:write("\n")
   stream:write("Arguments:\n")
   stream:write("  mod_dir         Mod project directory (default: current directory)\n")
@@ -35,7 +36,7 @@ function Cli.write_help(stream, version)
   stream:write("  factestio --doctor\n")
   stream:write("  factestio activate /path/to/mod\n")
   stream:write("  factestio activate --keep-other-mods /path/to/mod\n")
-  stream:write("  factestio --debug --timeout 15 /path/to/mod\n")
+  stream:write("  factestio --seed 12345 --debug --timeout 15 /path/to/mod\n")
 end
 
 local function parse_error(message, show_help)
@@ -53,6 +54,7 @@ function Cli.parse(argv)
     keep_other_mods = false,
     quiet = false,
     debug = false,
+    seed = nil,
     timeout = Constants.RUNTIME.DEFAULT_TEST_TIMEOUT,
     mod_dir = "./",
   }
@@ -74,16 +76,22 @@ function Cli.parse(argv)
       args.activate = true
     elseif current == "deactivate" then
       args.deactivate = true
-    elseif current == "--on" then
-      args.activate = true
-    elseif current == "--off" then
-      args.deactivate = true
     elseif current == "--keep-other-mods" then
       args.keep_other_mods = true
     elseif current == "-q" or current == "--quiet" then
       args.quiet = true
     elseif current == "-d" or current == "--debug" then
       args.debug = true
+    elseif current == "--seed" then
+      i = i + 1
+      local value = argv[i]
+      if not value then
+        return parse_error(nil, true)
+      end
+      args.seed = tonumber(value)
+      if not args.seed then
+        return parse_error("Error: seed must be a number.\n", false)
+      end
     elseif current == "-t" or current == "--timeout" then
       i = i + 1
       local value = argv[i]
@@ -99,6 +107,11 @@ function Cli.parse(argv)
       if not args.timeout then
         return parse_error("Error: timeout must be a number.\n", false)
       end
+    elseif current:match("^%-%-seed=") then
+      args.seed = tonumber(current:match("^%-%-seed=(.+)$"))
+      if not args.seed then
+        return parse_error("Error: seed must be a number.\n", false)
+      end
     elseif current:sub(1, 1) == "-" then
       return parse_error(nil, true)
     else
@@ -110,10 +123,7 @@ function Cli.parse(argv)
     i = i + 1
   end
 
-  if (args.doctor and args.activate)
-    or (args.doctor and args.deactivate)
-    or (args.activate and args.deactivate)
-  then
+  if (args.doctor and args.activate) or (args.doctor and args.deactivate) or (args.activate and args.deactivate) then
     return parse_error("Error: --doctor, activate, and deactivate are mutually exclusive.\n", false)
   end
 
@@ -147,6 +157,7 @@ function Cli.parse(argv)
   return {
     action = "run",
     debug = args.debug,
+    seed = args.seed,
     timeout = args.timeout,
     mod_dir = System.ensure_trailing_slash(args.mod_dir),
   }

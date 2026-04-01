@@ -26,6 +26,7 @@ local Constants = {
     STDERR_FILE_NAME = decoded.factestio.stderr_file_name,
     PID_FILE_NAME = decoded.factestio.pid_file_name,
     TEST_NAME_MANIFEST = decoded.factestio.test_name_manifest,
+    TEST_SEED_MANIFEST = decoded.factestio.test_seed_manifest,
     TEST_FILES_MANIFEST = decoded.factestio.test_files_manifest,
     TEST_CONTEXT_MANIFEST = decoded.factestio.test_context_manifest,
     TEST_CONSTANTS_MANIFEST = decoded.factestio.test_constants_manifest,

@@ -1,5 +1,5 @@
 return {
-  name = "Factestio",
+  name = "factestio",
   version = "0.1.0",
-  description = "A test scenario harness for Factestio",
+  description = "A test scenario harness for factestio",
 }

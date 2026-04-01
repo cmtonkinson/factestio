@@ -117,13 +117,7 @@ return function(F)
     if node.data and node.data.status == "pass" then
       local elapsed_seconds = os.time() - started_at
       F.green(
-        string.format(
-          "%s%s (%d assertions in %ds)",
-          indent,
-          node.name,
-          node.data.stats.assertions,
-          elapsed_seconds
-        )
+        string.format("%s%s (%d assertions in %ds)", indent, node.name, node.data.stats.assertions, elapsed_seconds)
       )
     else
       F.had_failures = true

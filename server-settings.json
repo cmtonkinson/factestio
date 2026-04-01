@@ -1,5 +1,5 @@
 {
-  "name": "Factestio Test Scenario Harness",
+  "name": "factestio Test Scenario Harness",
   "description": "A development mod including a custom scenario for running test hierarchies.",
   "visibility": "hidden",
   "auto_pause": false

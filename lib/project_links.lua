@@ -98,7 +98,7 @@ function ProjectLinks.ensure_mod_symlink(root, data_path, quiet)
     root:gsub("/$", ""),
     "Created mod symlink: " .. mods_link,
     "Updated mod symlink: " .. mods_link,
-    "Mod symlink already exists: " .. mods_link,
+    "factestio symlink already exists: " .. mods_link,
     quiet
   )
 end

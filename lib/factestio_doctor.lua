@@ -95,11 +95,11 @@ function Doctor.run(opts)
   end
 
   if failures == 0 then
-    emit("Environment looks good for Factestio.", true)
+    emit("Environment looks good for factestio.", true)
     return true
   end
 
-  emit("Fix the failing checks above before running Factestio.", false)
+  emit("Fix the failing checks above before running factestio.", false)
   return false
 end
 

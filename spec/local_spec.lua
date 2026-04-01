@@ -16,6 +16,7 @@ describe("local loader", function()
   local original_test_files
   local original_test_context
   local original_test_constants
+  local original_test_seed
   local original_alpha
   local original_beta
   local original_gamma
@@ -29,6 +30,7 @@ describe("local loader", function()
     original_test_files = package.loaded["test_files"]
     original_test_context = package.loaded["test_context"]
     original_test_constants = package.loaded["test_constants"]
+    original_test_seed = package.loaded["test_seed"]
     original_alpha = package.loaded["factestio.alpha"]
     original_beta = package.loaded["factestio.beta"]
     original_gamma = package.loaded["factestio.gamma"]
@@ -44,6 +46,7 @@ describe("local loader", function()
     package.loaded["test_files"] = original_test_files
     package.loaded["test_context"] = original_test_context
     package.loaded["test_constants"] = original_test_constants
+    package.loaded["test_seed"] = original_test_seed
     package.loaded["factestio.alpha"] = original_alpha
     package.loaded["factestio.beta"] = original_beta
     package.loaded["factestio.gamma"] = original_gamma
@@ -147,6 +150,27 @@ describe("local loader", function()
     assert.matches("DEFAULT_TEST_TIMEOUT = 8", output)
   end)
 
+  it("writes the test seed manifest as a Lua module", function()
+    local F = new_local_F()
+    F.TEST_SEED_FILE = "/tmp/test_seed.lua"
+
+    local writes = {}
+    io.open = function(path, mode) -- luacheck: ignore
+      assert.equal("/tmp/test_seed.lua", path)
+      assert.equal("w", mode)
+      return {
+        write = function(_, chunk)
+          table.insert(writes, chunk)
+        end,
+        close = function() end,
+      }
+    end
+
+    F.write_test_seed(12345)
+
+    assert.equal("return 12345\n", table.concat(writes))
+  end)
+
   it("loads discovered files and writes the manifest outside Factorio", function()
     local F = new_local_F()
     _G.script = nil
@@ -182,6 +206,7 @@ describe("local loader", function()
     local manifest_written
     local context_written
     local constants_written
+    local seed_written
     F.discover_test_files = function()
       return { "alpha", "beta" }
     end
@@ -194,11 +219,16 @@ describe("local loader", function()
     F.write_test_constants = function(constants)
       constants_written = constants
     end
+    F.write_test_seed = function(seed)
+      seed_written = seed
+    end
+    F.SEED = 12345
 
     F.load()
 
     assert.same({ "alpha", "beta" }, manifest_written)
     assert.equal("tmp-mod", context_written)
+    assert.equal(12345, seed_written)
     assert.equal("factestio.done", constants_written.FACTESTIO.DONE_FILE_NAME)
     assert.equal("/bin/factorio", F.FACTORIO_BINARY)
     assert.equal("/tmp/factorio-data/", F.FACTORIO_DATA_PATH)
@@ -220,6 +250,7 @@ describe("local loader", function()
     package.loaded["test_files"] = { "gamma" }
     package.loaded["test_context"] = { mod_name = "demo-mod" }
     package.loaded["test_constants"] = { FACTESTIO = { DONE_FILE_NAME = "factestio.done" } }
+    package.loaded["test_seed"] = 12345
     package.loaded["factestio.gamma"] = {
       root = { test = function() end },
     }
@@ -251,6 +282,7 @@ describe("local loader", function()
       mod_name = "demo-mod",
     }
     package.loaded["test_constants"] = { FACTESTIO = { DONE_FILE_NAME = "factestio.done" } }
+    package.loaded["test_seed"] = 12345
 
     package.preload["__demo-mod__.src.helpers"] = function()
       return {

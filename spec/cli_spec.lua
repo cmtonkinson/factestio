@@ -9,19 +9,19 @@ describe("Cli.parse", function()
     assert.equal("/tmp/mod/", parsed.mod_dir)
   end)
 
+  it("parses run seed", function()
+    local parsed = assert(Cli.parse({ "--seed", "12345", "/tmp/mod" }))
+
+    assert.equal("run", parsed.action)
+    assert.equal(12345, parsed.seed)
+    assert.equal("/tmp/mod/", parsed.mod_dir)
+  end)
+
   it("parses deactivate", function()
     local parsed = assert(Cli.parse({ "deactivate", "/tmp/mod" }))
 
     assert.equal("deactivate", parsed.action)
     assert.equal("/tmp/mod/", parsed.mod_dir)
-  end)
-
-  it("keeps legacy aliases working", function()
-    local activate = assert(Cli.parse({ "--on", "/tmp/mod" }))
-    local deactivate = assert(Cli.parse({ "--off", "/tmp/mod" }))
-
-    assert.equal("activate", activate.action)
-    assert.equal("deactivate", deactivate.action)
   end)
 
   it("rejects keep-other-mods outside activate", function()

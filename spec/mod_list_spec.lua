@@ -21,7 +21,9 @@ describe("ModList", function()
   it("activates an isolated session and restores the original baseline", function()
     local data_path = temp_data_path()
     local mod_list_path = data_path .. "mods/mod-list.json"
-    assert(System.write_file(mod_list_path, [[
+    assert(System.write_file(
+      mod_list_path,
+      [[
 {
   "mods": [
     { "name": "base", "enabled": true },
@@ -29,7 +31,8 @@ describe("ModList", function()
     { "name": "b", "enabled": false }
   ]
 }
-]]))
+]]
+    ))
 
     assert(ModList.begin_session(data_path, "a"))
     assert(ModList.activate(data_path, "a", false, true))
@@ -63,14 +66,17 @@ describe("ModList", function()
   it("keeps other mods enabled when requested", function()
     local data_path = temp_data_path()
     local mod_list_path = data_path .. "mods/mod-list.json"
-    assert(System.write_file(mod_list_path, [[
+    assert(System.write_file(
+      mod_list_path,
+      [[
 {
   "mods": [
     { "name": "base", "enabled": true },
     { "name": "other", "enabled": true }
   ]
 }
-]]))
+]]
+    ))
 
     assert(ModList.begin_session(data_path, "sut"))
     assert(ModList.activate(data_path, "sut", true, true))
@@ -92,26 +98,35 @@ describe("ModList", function()
     local data_path = temp_data_path()
     local mod_list_path = data_path .. "mods/mod-list.json"
     local session_dir = data_path .. "mods/.factestio/session"
-    assert(System.write_file(mod_list_path, [[
+    assert(System.write_file(
+      mod_list_path,
+      [[
 {
   "mods": [
     { "name": "base", "enabled": true },
     { "name": "fresh", "enabled": true }
   ]
 }
-]]))
+]]
+    ))
     assert(os.execute("mkdir -p " .. System.shell_quote(session_dir)))
-    assert(System.write_file(session_dir .. "/meta.json", [[
+    assert(System.write_file(
+      session_dir .. "/meta.json",
+      [[
 { "active_mod_name": "stale", "had_mod_list": true }
-]]))
-    assert(System.write_file(session_dir .. "/mod-list.json", [[
+]]
+    ))
+    assert(System.write_file(
+      session_dir .. "/mod-list.json",
+      [[
 {
   "mods": [
     { "name": "base", "enabled": true },
     { "name": "stale", "enabled": true }
   ]
 }
-]]))
+]]
+    ))
 
     assert(ModList.begin_session(data_path, "fresh"))
     assert(ModList.activate(data_path, "fresh", false, true))

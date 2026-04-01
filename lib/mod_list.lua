@@ -41,7 +41,7 @@ end
 
 local function write_session_meta(data_path, active_mod_name, had_mod_list)
   if not ensure_session_dir(data_path) then
-    return nil, "Error: could not create Factestio session directory\n"
+    return nil, "Error: could not create factestio session directory\n"
   end
 
   local cmd = string.format(
@@ -53,7 +53,7 @@ local function write_session_meta(data_path, active_mod_name, had_mod_list)
     System.shell_quote(session_meta_path(data_path))
   )
   if not System.command_succeeds(cmd) then
-    return nil, "Error: could not write Factestio session metadata\n"
+    return nil, "Error: could not write factestio session metadata\n"
   end
 
   return true
@@ -149,13 +149,10 @@ function ModList.begin_session(data_path, active_mod_name)
 
   if had_mod_list then
     if not ensure_session_dir(data_path) then
-      return nil, "Error: could not create Factestio session directory\n"
+      return nil, "Error: could not create factestio session directory\n"
     end
-    local copy_cmd = string.format(
-      "cp %s %s",
-      System.shell_quote(path),
-      System.shell_quote(session_snapshot_path(data_path))
-    )
+    local copy_cmd =
+      string.format("cp %s %s", System.shell_quote(path), System.shell_quote(session_snapshot_path(data_path)))
     if not System.command_succeeds(copy_cmd) then
       return nil, "Error: could not snapshot mod-list.json at " .. path .. "\n"
     end
@@ -228,11 +225,8 @@ function ModList.deactivate(data_path, sut_name, quiet)
 
   if meta then
     if meta.had_mod_list and System.exists(session_snapshot_path(data_path)) then
-      local restore_cmd = string.format(
-        "cp %s %s",
-        System.shell_quote(session_snapshot_path(data_path)),
-        System.shell_quote(path)
-      )
+      local restore_cmd =
+        string.format("cp %s %s", System.shell_quote(session_snapshot_path(data_path)), System.shell_quote(path))
       if not System.command_succeeds(restore_cmd) then
         return nil, "Error: could not restore mod-list.json at " .. path .. "\n"
       end

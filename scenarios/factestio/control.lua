@@ -3,11 +3,13 @@ local Constants = require("test_constants")
 local f = nil
 local this_test = nil
 local TEST_NAME_MODULE = "__factestio__.scenarios.factestio.test_name"
+local TEST_SEED_MODULE = "__factestio__.scenarios.factestio.test_seed"
 
 -- Setup (but only if we're actually running in scenario mode)
 if _G.script ~= nil then
   f = require("src.lib")
   this_test = require(TEST_NAME_MODULE)
+  math.randomseed(require(TEST_SEED_MODULE))
 
   f.load()
   f.compile()

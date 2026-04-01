@@ -55,6 +55,11 @@ return function(F)
   end
 
   -----------------------------------------------------------------------------
+  function F.write_test_seed(seed)
+    write_lua_manifest(F.TEST_SEED_FILE, string.format("return %d\n", seed))
+  end
+
+  -----------------------------------------------------------------------------
   function F.write_test_constants(constants)
     local content = "return " .. string.format("{\n")
     content = content .. "  FACTESTIO = {\n"
@@ -115,6 +120,7 @@ return function(F)
       file_names = F.discover_test_files()
       F.write_test_manifest(file_names)
       F.write_test_context(read_mod_name_from_info(F.MOD_DIR))
+      F.write_test_seed(F.SEED)
       F.write_test_constants(Constants)
     else
       file_names = require("test_files")
@@ -148,7 +154,7 @@ return function(F)
 
   -----------------------------------------------------------------------------
   function F.set_paths(cfg)
-    assert(type(cfg) == "table", "Factestio.config: cfg must be a table")
+    assert(type(cfg) == "table", "factestio.config: cfg must be a table")
     if cfg.binary then
       F.FACTORIO_BINARY = cfg.binary
     end

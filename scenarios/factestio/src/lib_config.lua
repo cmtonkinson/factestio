@@ -21,6 +21,7 @@ return function(F)
     F.SETTINGS = F.ROOT .. Constants.FACTESTIO.SERVER_SETTINGS_FILE
     F.SAVES = F.ROOT .. "saves"
     F.TEST_NAME_FILE = F.ROOT .. "scenarios/factestio/" .. Constants.FACTESTIO.TEST_NAME_MANIFEST
+    F.TEST_SEED_FILE = F.ROOT .. "scenarios/factestio/" .. Constants.FACTESTIO.TEST_SEED_MANIFEST
     F.TEST_FILES_MANIFEST = F.ROOT .. "scenarios/factestio/" .. Constants.FACTESTIO.TEST_FILES_MANIFEST
     F.TEST_CONTEXT_MANIFEST = F.ROOT .. "scenarios/factestio/" .. Constants.FACTESTIO.TEST_CONTEXT_MANIFEST
     F.TEST_CONSTANTS_MANIFEST = F.ROOT .. "scenarios/factestio/" .. Constants.FACTESTIO.TEST_CONSTANTS_MANIFEST
@@ -37,6 +38,7 @@ return function(F)
     F.TEST_STDOUT = Constants.FACTESTIO.STDOUT_FILE_NAME
     F.TEST_STDERR = Constants.FACTESTIO.STDERR_FILE_NAME
     F.PID_FILE = Constants.FACTESTIO.PID_FILE_NAME
+    F.TEST_SEED_FILE = Constants.FACTESTIO.TEST_SEED_MANIFEST
     -- results_file() is called per-node, so no static path needed here.
   end
 

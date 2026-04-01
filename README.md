@@ -1,17 +1,21 @@
 # factestio
-A hierarchical scenario-based test framework for Factorio mods. Define tests as
-a DAG — child tests inherit their parent's full world state via save/restore
-snapshots, letting you build up complex game states incrementally.
+A [Scenario Tree Testing] framework for Factorio mods. Define tests as a DAG —
+child tests inherit their parent's full world state via save/restore snapshots,
+letting you build up complex game states incrementally.
 
-> **Platform support:** macOS is the primary supported platform. Linux bootstrap and path detection are now supported on a best-effort basis for common installs, but have not been validated as extensively.
+> **Platform support:** macOS is the primary supported platform. Linux bootstrap
+> and path detection are now supported on a best-effort basis for common
+> installs, but have not been validated as extensively.
 
 ## Requirements
 - Factorio (headless)
-- Lua 5.2.x on PATH (Factorio's runtime is Lua 5.2; other versions are not supported)
+- Lua 5.2.x on PATH (Factorio's runtime is Lua 5.2; other versions are not
+  supported)
 - LuaRocks
 - bash
 
-Lua 5.2 is not available via Homebrew core. The recommended approach is [luaver](https://github.com/DhavalKapil/luaver):
+Lua 5.2 is not available via Homebrew core. The recommended approach is
+[luaver](https://github.com/DhavalKapil/luaver):
 
 ```bash
 luaver install 5.2.4 && luaver use 5.2.4
@@ -39,9 +43,11 @@ factestio activate
 
 This will:
 1. Create a `factestio/` directory in your mod project (if not present)
-2. Copy `factestio/config.lua.example` to `factestio/config.lua` for you to fill in
+2. Copy `factestio/config.lua.example` to `factestio/config.lua` for you to fill
+   in
 3. Copy `factestio/example.lua` as a starting point for your tests
-4. Create or update `factestio/.gitignore` to ignore local config and generated results
+4. Create or update `factestio/.gitignore` to ignore local config and generated
+   results
 5. Symlink your mod project's `factestio/` into the factestio scenario
 6. Symlink the factestio repo into Factorio's mods directory
 7. Symlink the SUT mod into Factorio's mods directory
@@ -70,7 +76,8 @@ return {
 }
 ```
 
-`factestio activate` also checks `FACTESTIO_FACTORIO_BINARY` and `FACTESTIO_FACTORIO_DATA` before falling back to platform defaults.
+`factestio activate` also checks `FACTESTIO_FACTORIO_BINARY` and
+`FACTESTIO_FACTORIO_DATA` before falling back to platform defaults.
 
 To keep other non-base mods enabled during activation:
 
@@ -86,8 +93,16 @@ factestio
 Or with options:
 
 ```bash
-factestio --debug --timeout 15 /path/to/mod/project
+factestio --seed 12345 --debug --timeout 15 /path/to/mod/project
 ```
+
+At startup factestio prints:
+- version
+- mod title
+- working directory
+- seed
+
+If you omit `--seed`, factestio generates one and prints it so the run can be reproduced later.
 
 To validate your shell/runtime setup before running tests:
 
@@ -100,7 +115,8 @@ factestio --doctor
 factestio deactivate
 ```
 
-This removes the Factestio/SUT symlinks and restores the pre-activation `mod-list.json` state captured when the current Factestio session began.
+This removes the factestio/SUT symlinks and restores the pre-activation
+`mod-list.json` state captured when the current factestio session began.
 
 ## CLI flags
 | Flag | Description |
@@ -111,6 +127,7 @@ This removes the Factestio/SUT symlinks and restores the pre-activation `mod-lis
 | `--keep-other-mods` | Keep other non-base mods enabled during `activate` |
 | `-q, --quiet` | Suppress informational output (use with `activate`/`deactivate`) |
 | `-d, --debug` | Run in debug mode |
+| `--seed N` | Seed Lua `math.random` for reproducible test runs |
 | `-t, --timeout N` | Timeout for each scenario in seconds (default: 8) |
 | `--doctor` | Validate the Lua 5.2 + LuaRocks environment |
 | `-V, --version` | Print the installed factestio version |
@@ -127,11 +144,13 @@ Your mod project's `factestio/` directory contains:
 | `.gitignore` | Created by `factestio activate`; ignores `config.lua` and `results/`. |
 | `results/` | Generated artifacts from the most recent run. |
 
-`factestio activate` creates `factestio/.gitignore` for you so local config and generated results stay out of version control.
+`factestio activate` creates `factestio/.gitignore` for you so local config and
+generated results stay out of version control.
 
-## Writing tests Tests are defined in `factestio/` as Lua files returning a
-table of named scenarios. Each scenario is a table with a `test` function and
-optional `from`, `before`, and `after` keys.
+## Writing tests
+Tests are defined in `factestio/` as Lua files returning a table of named
+scenarios. Each scenario is a table with a `test` function and optional `from`,
+`before`, and `after` keys.
 
 ```lua
 -- factestio/my_tests.lua
@@ -158,7 +177,8 @@ return {
 }
 ```
 
-All `factestio/*.lua` files are discovered automatically at runtime, except `factestio/config.lua`.
+All `factestio/*.lua` files are discovered automatically at runtime, except
+`factestio/config.lua`.
 
 ### DSL reference
 | Key | Type | Description |
@@ -182,7 +202,8 @@ To reference a test in a different file, use a fully-qualified dotted name:
 verify = { from = 'other_file.setup', ... }  -- cross-file reference
 ```
 
-Test names are automatically prefixed with their filename in the registry (e.g. `my_tests.setup`), so bare names are relative and dotted names are absolute.
+Test names are automatically prefixed with their filename in the registry (e.g.
+`my_tests.setup`), so bare names are relative and dotted names are absolute.
 
 ### Assertions
 ```lua
@@ -200,7 +221,14 @@ context.node     -- the test node (metadata)
 ## How it works
 Each test runs Factorio headlessly in a fresh process:
 
-- **Root tests** (`no from`): launched with `--start-server-load-scenario`, generating a fresh world.
-- **Child tests** (`from = 'parent'`): the parent's save zip is loaded with `--start-server`, restoring the full world state including all entities.
+- **Root tests** (`no from`): launched with `--start-server-load-scenario`,
+  generating a fresh world.
+- **Child tests** (`from = 'parent'`): the parent's save zip is loaded with
+  `--start-server`, restoring the full world state including all entities.
 
-At tick +10 the test runs, at tick +20 the world is saved, at tick +30 the process signals completion. Results and saves are collected under `factestio/results/`.
+At tick +10 the test runs, at tick +20 the world is saved, at tick +30 the
+process signals completion. Results and saves are collected under
+`factestio/results/`.
+
+
+[Scenario Tree Testing]: https://medium.com/@chris_59795/you-write-too-many-tests-6ce58e959045

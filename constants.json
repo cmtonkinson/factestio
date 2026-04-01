@@ -13,6 +13,7 @@
     "stderr_file_name": "factestio.stderr",
     "pid_file_name": "factestio.pid",
     "test_name_manifest": "test_name.lua",
+    "test_seed_manifest": "test_seed.lua",
     "test_files_manifest": "test_files.lua",
     "test_context_manifest": "test_context.lua",
     "test_constants_manifest": "test_constants.lua",
