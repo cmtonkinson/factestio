@@ -2,11 +2,12 @@ local Constants = require("test_constants")
 
 local f = nil
 local this_test = nil
+local TEST_NAME_MODULE = "__factestio__.scenarios.factestio.test_name"
 
 -- Setup (but only if we're actually running in scenario mode)
 if _G.script ~= nil then
   f = require("src.lib")
-  this_test = require("test_name")
+  this_test = require(TEST_NAME_MODULE)
 
   f.load()
   f.compile()
@@ -26,8 +27,9 @@ end)
 
 script.on_event(defines.events.on_tick, function(event) -- luacheck: ignore 212
   -- Detect if this is a new test (child loading parent's save).
-  -- When test_name.lua inside the save is updated via zip surgery,
-  -- this_test won't match storage.factestio_test_name, triggering a reset.
+  -- test_name.lua is loaded from the installed factestio mod on disk so each
+  -- fresh Factorio process sees the current target test, even when loading a
+  -- child save from a prior scenario.
   if storage.factestio_test_name ~= this_test then
     storage.factestio_test_name = this_test
     storage.factestio_base_tick = event.tick

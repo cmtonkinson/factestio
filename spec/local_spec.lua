@@ -277,3 +277,93 @@ describe("local loader", function()
     package.preload["factestio.gamma"] = nil
   end)
 end)
+
+describe("local runner", function()
+  local original_io_open
+  local original_time
+  local original_execute
+
+  before_each(function()
+    original_io_open = io.open
+    original_time = os.time
+    original_execute = os.execute
+  end)
+
+  after_each(function()
+    io.open = original_io_open -- luacheck: ignore
+    os.time = original_time -- luacheck: ignore
+    os.execute = original_execute -- luacheck: ignore
+  end)
+
+  it("launches child scenarios without child save rewrites", function()
+    local F = new_local_F()
+    F.FACTORIO_BINARY = "/bin/factorio"
+    F.FACTORIO_DATA_PATH = "/tmp/factorio/"
+    F.TEST_NAME_FILE = "/tmp/test_name.lua"
+    F.TEST_STDOUT = "/tmp/stdout.log"
+    F.TEST_STDERR = "/tmp/stderr.log"
+    F.SETTINGS = "/tmp/server-settings.json"
+    F.PID_FILE = "/tmp/factestio.pid"
+    F.DONE_FILE = "/tmp/factestio.done"
+    F.SCRIPT_OUTPUT = "/tmp/script-output/"
+    F.RESULTS_ROOT = "factestio/results"
+    F.ROOT = "/tmp/factestio/"
+    F.TEST_TIMEOUT = 1
+
+    local commands = {}
+    F.cmd = function(fmt, ...)
+      local cmd = string.format(fmt, ...)
+      table.insert(commands, cmd)
+      return true
+    end
+    F.save_name = function()
+      return "factestio/results/parent/factestio-parent.zip"
+    end
+
+    local done_reads = 0
+    io.open = function(path, mode) -- luacheck: ignore
+      if path == F.DONE_FILE then
+        done_reads = done_reads + 1
+        if done_reads == 1 then
+          return {
+            close = function() end,
+          }
+        end
+        return nil
+      end
+      if path == F.PID_FILE then
+        return {
+          read = function()
+            return "123\n"
+          end,
+          close = function() end,
+        }
+      end
+      return original_io_open(path, mode)
+    end
+    os.time = function() -- luacheck: ignore
+      return 0
+    end
+    os.execute = function() -- luacheck: ignore
+      return true
+    end
+
+    local parent = { data = { name = "parent" } }
+    local child = {
+      data = {
+        name = "child",
+        stats = { failed = 0 },
+        status = "pending",
+      },
+      parent = parent,
+    }
+
+    F.start_factorio(child)
+
+    assert.is_truthy(commands[1]:match([[^cp "]]) or commands[1]:match("^cp '"))
+    assert.is_truthy(commands[2]:find('/tmp/test_name.lua', 1, true))
+    assert.is_truthy(commands[2]:find('child', 1, true))
+    assert.is_truthy(table.concat(commands, "\n"):find("sh %-c '", 1, false))
+    assert.is_nil(table.concat(commands, "\n"):match("zipfile"))
+  end)
+end)

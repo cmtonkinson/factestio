@@ -165,31 +165,18 @@ return function(F)
       launch_args[#launch_args + 1] = "--start-server-load-scenario"
       launch_args[#launch_args + 1] = "factestio/factestio"
     else
-      -- Child test: take the parent's save zip and inject this test's name into
-      -- it via Python zip surgery, then load it directly (on_load fires, full
-      -- world state — entities, map, storage — is restored from the zip).
+      -- Child test: copy the parent's save, update the on-disk test manifest,
+      -- then load the child save directly (on_load fires, full world state —
+      -- entities, map, storage — is restored from the zip).
       local parent_zip = F.save_name(node.parent)
       local child_zip = F.FACTORIO_DATA_PATH .. "saves/" .. Constants.FACTESTIO.CHILD_LOAD_BASENAME .. ".zip"
       local cp_ok = F.cmd('cp "%s" "%s"', parent_zip, child_zip)
       if not cp_ok then
         error("Failed to copy parent save: " .. parent_zip)
       end
-      -- Overwrite test_name.lua inside the zip so control.lua require()s the
-      -- right name when Factorio loads the save.
-      local zip_ok = F.cmd(
-        "python3 -c '"
-          .. "import zipfile, sys, os; "
-          .. 'src = sys.argv[1]; tmp = src + ".tmp"; name = sys.argv[2]; '
-          .. 'zin = zipfile.ZipFile(src, "r"); zout = zipfile.ZipFile(tmp, "w"); '
-          .. '[zout.writestr(i, ("return \\"" + name + "\\"\\n")'
-          .. ' if i.filename.endswith("/test_name.lua") else zin.read(i.filename)) for i in zin.infolist()]; '
-          .. "zin.close(); zout.close(); os.replace(tmp, src)"
-          .. '\' "%s" "%s"',
-        child_zip,
-        node.data.name
-      )
-      if not zip_ok then
-        error("Failed to inject test name into child zip: " .. child_zip)
+      local ok = F.cmd('echo return \'"%s"\' > "%s"', node.data.name, F.TEST_NAME_FILE)
+      if not ok then
+        error("Failed to write test name file: " .. F.TEST_NAME_FILE)
       end
       launch_args[#launch_args + 1] = "--start-server"
       launch_args[#launch_args + 1] = Constants.FACTESTIO.CHILD_LOAD_BASENAME
