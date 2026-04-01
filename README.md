@@ -122,26 +122,77 @@ factestio deactivate
 This removes the factestio/SUT symlinks and restores the pre-activation
 `mod-list.json` state captured when the current factestio session began.
 
-## CLI flags
+## CLI
+
+### Global flags
 | Flag | Description |
 |------|-------------|
 | `-h, --help` | Show command help |
-| `activate` | Scaffold and activate factestio for this mod project |
-| `deactivate` | Restore the original mod-list state and remove factestio links |
-| `list` | Show the compiled scenario DAG |
-| `--keep-other-mods` | Keep other non-base mods enabled during `activate` |
-| `-q, --quiet` | Suppress informational output (use with `activate`/`deactivate`) |
+| `-V, --version` | Print the installed factestio version |
+
+### Commands
+
+#### `doctor`
+Validate the Lua 5.2 + LuaRocks environment.
+
+```bash
+factestio doctor
+```
+
+#### `activate`
+Scaffold and activate factestio for this mod project.
+
+```bash
+factestio activate [mod_dir]
+```
+
+Flags:
+| Flag | Description |
+|------|-------------|
+| `--keep-other-mods` | Keep other non-base mods enabled during activation |
+| `-q, --quiet` | Suppress informational output |
+
+#### `deactivate`
+Restore the original mod-list state and remove factestio links.
+
+```bash
+factestio deactivate [mod_dir]
+```
+
+Flags:
+| Flag | Description |
+|------|-------------|
+| `-q, --quiet` | Suppress informational output |
+
+#### `list`
+Show the compiled scenario DAG without running Factorio.
+
+```bash
+factestio list [options] [mod_dir]
+```
+
+Flags:
+| Flag | Description |
+|------|-------------|
+| `--roots` | Show only root scenarios |
+| `--children ID` | Show the named scenario and all descendants |
+| `--json` | Emit machine-readable JSON |
+
+#### Test run
+Run scenarios for the target mod project.
+
+```bash
+factestio [options] [mod_dir]
+```
+
+Flags:
+| Flag | Description |
+|------|-------------|
 | `-d, --debug` | Run in debug mode |
-| `--roots` | With `list`, show only root scenarios |
-| `--children ID` | With `list`, show the named scenario and all descendants |
-| `--json` | Emit JSON for `list` |
 | `--leaf ID` | Run only the named scenario and its parent chain |
 | `--branch ID` | Run the named scenario, its parents, and all children |
 | `--seed N` | Seed Lua `math.random` for reproducible test runs |
 | `-t, --timeout N` | Timeout for each scenario in seconds (default: 8) |
-| `doctor` | Validate the Lua 5.2 + LuaRocks environment |
-| `-V, --version` | Print the installed factestio version |
-| `mod_dir` | Mod project directory (default: current directory) |
 
 ## The `factestio/` directory
 Your mod project's `factestio/` directory contains:
@@ -267,5 +318,12 @@ At tick +10 the test runs, at tick +20 the world is saved, at tick +30 the
 process signals completion. Results and saves are collected under
 `factestio/results/`.
 
+## Sample project
+A real mod using factestio can be found at
+[cmtonkinson/paste-logistic-settings-continued]. Sample output looks like:
+![factestio sample output](assets/plsc-factestio.png)
 
+
+[cmtonkinson/paste-logistic-settings-continued]:
+https://github.com/cmtonkinson/paste-logistic-settings-continued
 [Scenario Tree Testing]: https://medium.com/@chris_59795/you-write-too-many-tests-6ce58e959045
