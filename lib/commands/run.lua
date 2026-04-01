@@ -2,6 +2,7 @@ local Constants = require("lib.constants")
 local ModList = require("lib.mod_list")
 local ProjectLinks = require("lib.project_links")
 local ProjectConfig = require("lib.project_config")
+local System = require("lib.system")
 
 local Command = {}
 
@@ -9,7 +10,7 @@ local function generated_seed()
   return math.floor(os.time() + (os.clock() * 1000000))
 end
 
-function Command.run(root, mod_dir, data_path, debug, timeout, seed)
+function Command.run(root, mod_dir, data_path, debug, timeout, seed, leaf, branch)
   local version = require("lib.version").read(root)
   local run_seed = seed or generated_seed()
 
@@ -29,8 +30,9 @@ function Command.run(root, mod_dir, data_path, debug, timeout, seed)
   end
 
   local mod_title = ProjectConfig.title(mod_dir) or mod_dir:match("([^/]+)/?$") or mod_dir
+  local resolved_mod_dir = System.realpath(mod_dir:gsub("/$", "")) or mod_dir
   print(string.format("factestio v%s for %s\n", version, mod_title))
-  print(string.format("workdir: %s", mod_dir))
+  print(string.format("workdir: %s", resolved_mod_dir))
   print(string.format("seed: %d\n\n", run_seed))
 
   local F = require("scenarios.factestio.src.lib")
@@ -48,6 +50,11 @@ function Command.run(root, mod_dir, data_path, debug, timeout, seed)
   F.init(root)
 
   local roots = F.compile()
+  local mode = leaf and "leaf" or (branch and "branch" or nil)
+  local target = leaf or branch
+  if mode then
+    roots = F.select_roots(roots, mode, target)
+  end
   F.run(roots)
 
   if F.had_failures then

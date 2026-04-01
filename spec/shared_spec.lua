@@ -347,3 +347,53 @@ describe("F.compile", function()
     assert.equal(0, stats.failed)
   end)
 end)
+
+describe("F.select_roots", function()
+  local function build_sample_graph()
+    F.registry = {}
+    F.registry["alpha.setup"] = { test = function() end }
+    F.registry["alpha.child"] = { test = function() end, from = "alpha.setup" }
+    F.registry["alpha.grandchild"] = { test = function() end, from = "alpha.child" }
+    F.registry["beta.setup"] = { test = function() end }
+    return F.compile()
+  end
+
+  it("selects only the parent chain for leaf mode", function()
+    local roots = build_sample_graph()
+    local selected = F.select_roots(roots, "leaf", "alpha.child")
+
+    assert.equal(1, #selected)
+    assert.equal("alpha.setup", selected[1].data.name)
+    assert.equal(1, #selected[1].children)
+    assert.equal("alpha.child", selected[1].children[1].data.name)
+    assert.equal(0, #selected[1].children[1].children)
+  end)
+
+  it("selects the whole branch for branch mode", function()
+    local roots = build_sample_graph()
+    local selected = F.select_roots(roots, "branch", "alpha.child")
+
+    assert.equal(1, #selected)
+    assert.equal("alpha.setup", selected[1].data.name)
+    assert.equal("alpha.child", selected[1].children[1].data.name)
+    assert.equal(1, #selected[1].children[1].children)
+    assert.equal("alpha.grandchild", selected[1].children[1].children[1].data.name)
+  end)
+
+  it("accepts a suite prefix for branch mode", function()
+    local roots = build_sample_graph()
+    local selected = F.select_roots(roots, "branch", "alpha")
+
+    assert.equal(1, #selected)
+    assert.equal("alpha.setup", selected[1].data.name)
+    assert.equal("alpha.child", selected[1].children[1].data.name)
+    assert.equal("alpha.grandchild", selected[1].children[1].children[1].data.name)
+  end)
+
+  it("errors on unknown scenario ids", function()
+    local roots = build_sample_graph()
+    assert.has_error(function()
+      F.select_roots(roots, "leaf", "ghost.test")
+    end, "Unknown scenario id: ghost.test")
+  end)
+end)

@@ -94,6 +94,8 @@ Or with options:
 
 ```bash
 factestio --seed 12345 --debug --timeout 15 /path/to/mod/project
+factestio --leaf basic.setup
+factestio --branch regressions.setup
 ```
 
 At startup factestio prints:
@@ -127,6 +129,8 @@ This removes the factestio/SUT symlinks and restores the pre-activation
 | `--keep-other-mods` | Keep other non-base mods enabled during `activate` |
 | `-q, --quiet` | Suppress informational output (use with `activate`/`deactivate`) |
 | `-d, --debug` | Run in debug mode |
+| `--leaf ID` | Run only the named scenario and its parent chain |
+| `--branch ID` | Run the named scenario, its parents, and all children |
 | `--seed N` | Seed Lua `math.random` for reproducible test runs |
 | `-t, --timeout N` | Timeout for each scenario in seconds (default: 8) |
 | `--doctor` | Validate the Lua 5.2 + LuaRocks environment |
@@ -204,6 +208,18 @@ verify = { from = 'other_file.setup', ... }  -- cross-file reference
 
 Test names are automatically prefixed with their filename in the registry (e.g.
 `my_tests.setup`), so bare names are relative and dotted names are absolute.
+
+### Targeting a scenario
+
+Use the fully-qualified scenario id when targeting part of the DAG:
+
+```bash
+factestio --leaf my_tests.setup
+factestio --branch other_file.root_case
+```
+
+`--leaf` runs just that scenario plus its parent chain. `--branch` runs that
+scenario, its parent chain, and all of its descendants.
 
 ### Assertions
 ```lua

@@ -53,7 +53,17 @@ if parsed.action == "activate" then
 elseif parsed.action == "deactivate" then
   exit_code, command_err = DeactivateCommand.run(root, parsed.mod_dir, data_path, parsed.quiet)
 else
-  exit_code, command_err = RunCommand.run(root, parsed.mod_dir, data_path, parsed.debug, parsed.timeout, parsed.seed)
+  exit_code, command_err =
+    RunCommand.run(
+      root,
+      parsed.mod_dir,
+      data_path,
+      parsed.debug,
+      parsed.timeout,
+      parsed.seed,
+      parsed.leaf,
+      parsed.branch
+    )
 end
 
 if not exit_code then

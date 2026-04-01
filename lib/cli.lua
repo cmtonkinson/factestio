@@ -20,6 +20,8 @@ function Cli.write_help(stream, version)
   stream:write("\n")
   stream:write("Run Options:\n")
   stream:write("  -d, --debug     Print debug output while running tests\n")
+  stream:write("  --leaf ID       Run only the named scenario and its parent chain\n")
+  stream:write("  --branch ID     Run the named scenario, its parents, and all children\n")
   stream:write("  --seed N        Seed Lua math.random for reproducible test runs\n")
   stream:write("  -t, --timeout N Set per-scenario timeout in seconds (default: 8)\n")
   stream:write("  -q, --quiet     Suppress informational output for activate and deactivate\n")
@@ -36,6 +38,8 @@ function Cli.write_help(stream, version)
   stream:write("  factestio --doctor\n")
   stream:write("  factestio activate /path/to/mod\n")
   stream:write("  factestio activate --keep-other-mods /path/to/mod\n")
+  stream:write("  factestio --leaf basic.setup\n")
+  stream:write("  factestio --branch regressions.setup\n")
   stream:write("  factestio --seed 12345 --debug --timeout 15 /path/to/mod\n")
 end
 
@@ -54,6 +58,8 @@ function Cli.parse(argv)
     keep_other_mods = false,
     quiet = false,
     debug = false,
+    leaf = nil,
+    branch = nil,
     seed = nil,
     timeout = Constants.RUNTIME.DEFAULT_TEST_TIMEOUT,
     mod_dir = "./",
@@ -82,6 +88,20 @@ function Cli.parse(argv)
       args.quiet = true
     elseif current == "-d" or current == "--debug" then
       args.debug = true
+    elseif current == "--leaf" then
+      i = i + 1
+      local value = argv[i]
+      if not value then
+        return parse_error(nil, true)
+      end
+      args.leaf = value
+    elseif current == "--branch" then
+      i = i + 1
+      local value = argv[i]
+      if not value then
+        return parse_error(nil, true)
+      end
+      args.branch = value
     elseif current == "--seed" then
       i = i + 1
       local value = argv[i]
@@ -112,6 +132,10 @@ function Cli.parse(argv)
       if not args.seed then
         return parse_error("Error: seed must be a number.\n", false)
       end
+    elseif current:match("^%-%-leaf=") then
+      args.leaf = current:match("^%-%-leaf=(.+)$")
+    elseif current:match("^%-%-branch=") then
+      args.branch = current:match("^%-%-branch=(.+)$")
     elseif current:sub(1, 1) == "-" then
       return parse_error(nil, true)
     else
@@ -127,8 +151,16 @@ function Cli.parse(argv)
     return parse_error("Error: --doctor, activate, and deactivate are mutually exclusive.\n", false)
   end
 
+  if args.leaf and args.branch then
+    return parse_error("Error: --leaf and --branch are mutually exclusive.\n", false)
+  end
+
   if args.keep_other_mods and not args.activate then
     return parse_error("Error: --keep-other-mods only applies to activate.\n", false)
+  end
+
+  if (args.leaf or args.branch) and (args.activate or args.deactivate or args.doctor) then
+    return parse_error("Error: --leaf and --branch only apply to test runs.\n", false)
   end
 
   if args.doctor then
@@ -157,6 +189,8 @@ function Cli.parse(argv)
   return {
     action = "run",
     debug = args.debug,
+    branch = args.branch,
+    leaf = args.leaf,
     seed = args.seed,
     timeout = args.timeout,
     mod_dir = System.ensure_trailing_slash(args.mod_dir),

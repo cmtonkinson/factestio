@@ -304,6 +304,88 @@ return function(F)
   end
 
   -----------------------------------------------------------------------------
+  function F.find_nodes_by_prefix(prefix)
+    local matches = {}
+    local dotted_prefix = prefix .. "."
+
+    for name, node in pairs(F.registry) do
+      if name == prefix or name:sub(1, #dotted_prefix) == dotted_prefix then
+        table.insert(matches, node)
+      end
+    end
+
+    table.sort(matches, function(a, b)
+      return a.data.name < b.data.name
+    end)
+    return matches
+  end
+
+  -----------------------------------------------------------------------------
+  function F.select_roots(roots, mode, target_name)
+    local included = {}
+
+    local function include_ancestors(node)
+      local current = node
+      while current do
+        included[current] = true
+        current = current.parent
+      end
+    end
+
+    if mode == "branch" then
+      local targets = F.find_nodes_by_prefix(target_name)
+      if #targets == 0 then
+        error("Unknown scenario id: " .. tostring(target_name))
+      end
+
+      local function include_descendants(node)
+        included[node] = true
+        for _, child in ipairs(node.children) do
+          include_descendants(child)
+        end
+      end
+
+      for _, target in ipairs(targets) do
+        include_ancestors(target)
+        include_descendants(target)
+      end
+    elseif mode == "leaf" then
+      local target = F.registry[target_name]
+      if not target then
+        error("Unknown scenario id: " .. tostring(target_name))
+      end
+      include_ancestors(target)
+    else
+      error("Unknown selection mode: " .. tostring(mode))
+    end
+
+    local function clone_selected(node)
+      if not included[node] then
+        return nil
+      end
+
+      local copy = Node.new(node.name, node.data)
+      copy.root = node.root
+      for _, child in ipairs(node.children) do
+        local child_copy = clone_selected(child)
+        if child_copy then
+          copy:add(child_copy)
+        end
+      end
+      return copy
+    end
+
+    local selected_roots = {}
+    for _, root in ipairs(roots) do
+      local root_copy = clone_selected(root)
+      if root_copy then
+        table.insert(selected_roots, root_copy)
+      end
+    end
+    return selected_roots
+  end
+
+  -----------------------------------------------------------------------------
   function F.results_file(node)
     return "factestio-" .. node.data.name .. "-results.json"
   end
