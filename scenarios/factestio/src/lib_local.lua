@@ -5,6 +5,7 @@ return function(F)
   local io = require("io")
   local json = require("lib.factestio_json")
   local os = require("os")
+  local unpack_args = table.unpack or rawget(_G, "unpack")
 
   F.start_time = 0
   F.end_time = 0
@@ -138,11 +139,22 @@ return function(F)
   end
 
   -----------------------------------------------------------------------------
+  local function shell_words(args)
+    local quoted = {}
+    for _, arg in ipairs(args) do
+      quoted[#quoted + 1] = F.shell_quote(arg)
+    end
+    return table.concat(quoted, " ")
+  end
+
+  -----------------------------------------------------------------------------
   function F.start_factorio(node)
     -- Build the Factorio launch command.
     -- Root tests (no parent): start a fresh world from the scenario on disk.
     -- Child tests (has parent): restore the parent's saved world state from zip.
-    local load_arg
+    local launch_args = {
+      F.FACTORIO_BINARY,
+    }
     if not node.parent then
       -- Root test: write the test name to disk so control.lua can require() it,
       -- then load the scenario fresh (on_init fires, brand-new world).
@@ -150,7 +162,8 @@ return function(F)
       if not ok then
         error("Failed to write test name file: " .. F.TEST_NAME_FILE)
       end
-      load_arg = "--start-server-load-scenario factestio/factestio"
+      launch_args[#launch_args + 1] = "--start-server-load-scenario"
+      launch_args[#launch_args + 1] = "factestio/factestio"
     else
       -- Child test: take the parent's save zip and inject this test's name into
       -- it via Python zip surgery, then load it directly (on_load fires, full
@@ -178,21 +191,36 @@ return function(F)
       if not zip_ok then
         error("Failed to inject test name into child zip: " .. child_zip)
       end
-      load_arg = string.format('--start-server "%s"', Constants.FACTESTIO.CHILD_LOAD_BASENAME)
+      launch_args[#launch_args + 1] = "--start-server"
+      launch_args[#launch_args + 1] = Constants.FACTESTIO.CHILD_LOAD_BASENAME
     end
 
     -- Start the headless server in the background. Redirect output to log files.
     F.cmd('> "%s"', F.TEST_STDOUT)
     F.cmd('> "%s"', F.TEST_STDERR)
-    local factorio_cmd =
-      string.format('%s %s --server-settings "%s" --disable-audio --nogamepad', F.FACTORIO_BINARY, load_arg, F.SETTINGS)
-    F.cmd(
-      'sh -c \'%s > "%s" 2>&1 & PID=$!; echo $PID > "%s"; echo $PID > "%s"\'',
-      factorio_cmd,
-      F.TEST_STDOUT,
-      F.PID_FILE,
-      F.ROOT .. Constants.FACTESTIO.TMP_PID_FILE
+    launch_args[#launch_args + 1] = "--server-settings"
+    launch_args[#launch_args + 1] = F.SETTINGS
+    launch_args[#launch_args + 1] = "--disable-audio"
+    launch_args[#launch_args + 1] = "--nogamepad"
+    local launch_ok = F.cmd(
+      "sh -c '"
+        .. 'trap "" INT TERM; '
+        .. "stdout_path=$1; pid_path=$2; root_pid_path=$3; shift 3; "
+        .. '"$@" > "$stdout_path" 2>&1 & '
+        .. "PID=$!; "
+        .. 'echo "$PID" > "$pid_path"; '
+        .. 'echo "$PID" > "$root_pid_path"'
+        .. "' sh %s",
+      shell_words({
+        F.TEST_STDOUT,
+        F.PID_FILE,
+        F.ROOT .. Constants.FACTESTIO.TMP_PID_FILE,
+        unpack_args(launch_args),
+      })
     )
+    if not launch_ok then
+      error("Failed to launch Factorio process")
+    end
 
     -- Busywait for the scenario's DONE_FILE signal, with a timeout guard.
     local done = false

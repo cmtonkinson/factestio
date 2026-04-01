@@ -60,6 +60,7 @@ mkdir -p "$FACTESTIO_ROOT/tmp"
 INTERRUPT_FILE="$FACTESTIO_ROOT/tmp/factestio.interrupt"
 rm -f "$INTERRUPT_FILE"
 INTERRUPT_COUNT=0
+CHILD_PID=""
 
 _factestio_cleanup() {
   local pid_file="$FACTESTIO_ROOT/tmp/factestio.pid"
@@ -74,18 +75,33 @@ _factestio_cleanup() {
 _factestio_interrupt() {
   INTERRUPT_COUNT=$((INTERRUPT_COUNT + 1))
   if [[ "$INTERRUPT_COUNT" -eq 1 ]]; then
-    : > "$INTERRUPT_FILE"
+    touch "$INTERRUPT_FILE"
     printf 'Interrupt received. Waiting for the current scenario to finish; press Ctrl+C again to force stop.\n' >&2
     return
   fi
 
   _factestio_cleanup
+  if [[ -n "$CHILD_PID" ]]; then
+    kill -9 "$CHILD_PID" 2>/dev/null || true
+  fi
   exit 130
 }
 
 trap '_factestio_interrupt' INT TERM
 
-lua "$FACTESTIO_ROOT/lib/main.lua" "$@"
-status=$?
+lua "$FACTESTIO_ROOT/lib/main.lua" "$@" &
+CHILD_PID=$!
+status=0
+while true; do
+  if wait "$CHILD_PID"; then
+    status=0
+    break
+  fi
+  status=$?
+  if kill -0 "$CHILD_PID" 2>/dev/null; then
+    continue
+  fi
+  break
+done
 rm -f "$INTERRUPT_FILE"
 exit "$status"
