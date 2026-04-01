@@ -3,7 +3,7 @@ local System = require("lib.system")
 
 local ProjectConfig = {}
 
-function ProjectConfig.title(mod_dir)
+local function info(mod_dir)
   local info_path = mod_dir .. "info.json"
   local content = System.read_file(info_path)
   if not content then
@@ -15,7 +15,17 @@ function ProjectConfig.title(mod_dir)
     return nil
   end
 
-  return decoded.title
+  return decoded
+end
+
+function ProjectConfig.title(mod_dir)
+  local decoded = info(mod_dir)
+  return decoded and decoded.title or nil
+end
+
+function ProjectConfig.name(mod_dir)
+  local decoded = info(mod_dir)
+  return decoded and decoded.name or nil
 end
 
 function ProjectConfig.load(mod_dir, opts)
@@ -33,7 +43,7 @@ function ProjectConfig.load(mod_dir, opts)
       "Error: could not load factestio/config.lua from "
         .. mod_dir
         .. "\n"
-        .. "Run `factestio --on` first to scaffold the config.\n"
+        .. "Run `factestio activate` first to scaffold the config.\n"
   end
 
   return configuration

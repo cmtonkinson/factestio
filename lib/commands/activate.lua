@@ -1,12 +1,13 @@
 local Constants = require("lib.constants")
 local FactorioPaths = require("lib.factorio_paths")
 local ModList = require("lib.mod_list")
+local ProjectConfig = require("lib.project_config")
 local ProjectLinks = require("lib.project_links")
 local System = require("lib.system")
 
 local Command = {}
 
-function Command.run(root, mod_dir, quiet)
+function Command.run(root, mod_dir, quiet, keep_other_mods)
   local detected = FactorioPaths.detect()
   local guessed_binary = detected.binary
   local guessed_data = detected.data
@@ -77,18 +78,33 @@ function Command.run(root, mod_dir, quiet)
   if not (binary_ok and data_ok) then
     if not quiet then
       io.stderr:write("Warning: skipping mod-list.json and symlinks (Factorio not found)\n")
-      io.stderr:write("Edit " .. config_dst .. " then re-run `factestio --on`\n")
+      io.stderr:write("Edit " .. config_dst .. " then re-run `factestio activate`\n")
     end
     return 0
   end
 
+  local sut_name = ProjectConfig.name(mod_dir)
+  if not sut_name then
+    return nil, "Error: could not determine mod name from " .. mod_dir .. "info.json\n"
+  end
+
   local detected_data = System.ensure_trailing_slash(guessed_data)
-  local ok, err = ModList.set_enabled(detected_data, true, quiet)
+  local ok, err = ModList.begin_session(detected_data, sut_name)
+  if not ok then
+    return nil, err
+  end
+
+  ok, err = ModList.activate(detected_data, sut_name, keep_other_mods, quiet)
   if not ok then
     return nil, err
   end
 
   ok, err = ProjectLinks.ensure_mod_symlink(root, detected_data, quiet)
+  if not ok then
+    return nil, err
+  end
+
+  ok, err = ProjectLinks.ensure_sut_symlink(mod_dir, sut_name, detected_data, quiet)
   if not ok then
     return nil, err
   end
@@ -134,7 +150,7 @@ function Command.run(root, mod_dir, quiet)
   else
     io.stderr:write("Warning: Factorio --create failed to produce a save.\n")
     io.stderr:write("Check " .. stdout_log .. " for details.\n")
-    io.stderr:write("You can retry with `factestio --on` after resolving the issue.\n")
+    io.stderr:write("You can retry with `factestio activate` after resolving the issue.\n")
   end
 
   return 0

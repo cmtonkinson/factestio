@@ -90,6 +90,7 @@ return function(F)
   function F.exec(node, depth)
     local d = depth or 0
     local indent = string.rep(" ", d * 2)
+    local started_at = os.time()
     -- Do the thing.
     F.start_factorio(node)
     if not node.data.timeout then
@@ -114,7 +115,16 @@ return function(F)
     end
 
     if node.data and node.data.status == "pass" then
-      F.green(string.format("%s%s (%d assertions)", indent, node.name, node.data.stats.assertions))
+      local elapsed_seconds = os.time() - started_at
+      F.green(
+        string.format(
+          "%s%s (%d assertions in %ds)",
+          indent,
+          node.name,
+          node.data.stats.assertions,
+          elapsed_seconds
+        )
+      )
     else
       F.had_failures = true
       F.red(string.format("%s%s (failed: %s)", indent, node.name, node.data.error))

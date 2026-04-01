@@ -34,7 +34,7 @@ luarocks install --deps-only factestio-*.rockspec
 From your mod project directory, run:
 
 ```bash
-factestio --on
+factestio activate
 ```
 
 This will:
@@ -44,7 +44,9 @@ This will:
 4. Create or update `factestio/.gitignore` to ignore local config and generated results
 5. Symlink your mod project's `factestio/` into the factestio scenario
 6. Symlink the factestio repo into Factorio's mods directory
-7. Enable factestio in `mod-list.json`
+7. Symlink the SUT mod into Factorio's mods directory
+8. Enable both factestio and the SUT in `mod-list.json`
+9. By default, disable all other non-base mods for an isolated test session
 
 Edit `factestio/config.lua` in your mod project:
 
@@ -68,7 +70,13 @@ return {
 }
 ```
 
-`factestio --on` also checks `FACTESTIO_FACTORIO_BINARY` and `FACTESTIO_FACTORIO_DATA` before falling back to platform defaults.
+`factestio activate` also checks `FACTESTIO_FACTORIO_BINARY` and `FACTESTIO_FACTORIO_DATA` before falling back to platform defaults.
+
+To keep other non-base mods enabled during activation:
+
+```bash
+factestio activate --keep-other-mods
+```
 
 ## Running tests
 ```bash
@@ -89,18 +97,19 @@ factestio --doctor
 
 ## Disabling
 ```bash
-factestio --off
+factestio deactivate
 ```
 
-This removes symlinks and disables factestio in `mod-list.json`.
+This removes the Factestio/SUT symlinks and restores the pre-activation `mod-list.json` state captured when the current Factestio session began.
 
 ## CLI flags
 | Flag | Description |
 |------|-------------|
 | `-h, --help` | Show command help |
-| `--on` | Enable factestio for this mod project (symlink, mod-list, scaffold) |
-| `--off` | Disable factestio for this mod project |
-| `-q, --quiet` | Suppress informational output (use with `--on`/`--off`) |
+| `activate` | Scaffold and activate factestio for this mod project |
+| `deactivate` | Restore the original mod-list state and remove factestio links |
+| `--keep-other-mods` | Keep other non-base mods enabled during `activate` |
+| `-q, --quiet` | Suppress informational output (use with `activate`/`deactivate`) |
 | `-d, --debug` | Run in debug mode |
 | `-t, --timeout N` | Timeout for each scenario in seconds (default: 8) |
 | `--doctor` | Validate the Lua 5.2 + LuaRocks environment |
@@ -115,10 +124,10 @@ Your mod project's `factestio/` directory contains:
 | `config.lua` | Required. Local Factorio paths (gitignored). |
 | `config.lua.example` | Template for `config.lua`. |
 | `*.lua` | Your test files, one per suite. |
-| `.gitignore` | Created by `factestio --on`; ignores `config.lua` and `results/`. |
+| `.gitignore` | Created by `factestio activate`; ignores `config.lua` and `results/`. |
 | `results/` | Generated artifacts from the most recent run. |
 
-`factestio --on` creates `factestio/.gitignore` for you so local config and generated results stay out of version control.
+`factestio activate` creates `factestio/.gitignore` for you so local config and generated results stay out of version control.
 
 ## Writing tests Tests are defined in `factestio/` as Lua files returning a
 table of named scenarios. Each scenario is a table with a `test` function and

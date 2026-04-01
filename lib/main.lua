@@ -1,9 +1,9 @@
 #!/usr/bin/env lua
 
+local ActivateCommand = require("lib.commands.activate")
 local Cli = require("lib.cli")
+local DeactivateCommand = require("lib.commands.deactivate")
 local DoctorCommand = require("lib.commands.doctor")
-local OffCommand = require("lib.commands.off")
-local OnCommand = require("lib.commands.on")
 local ProjectConfig = require("lib.project_config")
 local RunCommand = require("lib.commands.run")
 local System = require("lib.system")
@@ -38,7 +38,7 @@ if parsed.action == "doctor" then
 end
 
 local configuration, config_err = ProjectConfig.load(parsed.mod_dir, {
-  allow_missing = parsed.action == "on" or parsed.action == "off",
+  allow_missing = parsed.action == "activate" or parsed.action == "deactivate",
 })
 if config_err then
   io.stderr:write(config_err)
@@ -48,10 +48,10 @@ end
 local data_path = ProjectConfig.data_path(configuration)
 
 local exit_code, command_err
-if parsed.action == "on" then
-  exit_code, command_err = OnCommand.run(root, parsed.mod_dir, parsed.quiet)
-elseif parsed.action == "off" then
-  exit_code, command_err = OffCommand.run(root, data_path, parsed.quiet)
+if parsed.action == "activate" then
+  exit_code, command_err = ActivateCommand.run(root, parsed.mod_dir, parsed.quiet, parsed.keep_other_mods)
+elseif parsed.action == "deactivate" then
+  exit_code, command_err = DeactivateCommand.run(root, parsed.mod_dir, data_path, parsed.quiet)
 else
   exit_code, command_err = RunCommand.run(root, parsed.mod_dir, data_path, parsed.debug, parsed.timeout)
 end

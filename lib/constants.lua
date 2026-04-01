@@ -34,6 +34,9 @@ local Constants = {
     TMP_PID_FILE = decoded.factestio.tmp_pid_file,
     TMP_SETUP_STDOUT = decoded.factestio.tmp_setup_stdout,
     TMP_INTERRUPT_FILE = decoded.factestio.tmp_interrupt_file,
+    SESSION_DIR = decoded.factestio.session_dir,
+    SESSION_SNAPSHOT_FILE = decoded.factestio.session_snapshot_file,
+    SESSION_META_FILE = decoded.factestio.session_meta_file,
   },
   SCHEDULER = {
     RUN_TICK_OFFSET = decoded.scheduler.run_tick_offset,

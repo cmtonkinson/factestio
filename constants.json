@@ -20,7 +20,10 @@
     "map_gen_settings_file": "map-gen-settings.json",
     "tmp_pid_file": "tmp/factestio.pid",
     "tmp_setup_stdout": "tmp/setup-stdout.txt",
-    "tmp_interrupt_file": "tmp/factestio.interrupt"
+    "tmp_interrupt_file": "tmp/factestio.interrupt",
+    "session_dir": ".factestio/session",
+    "session_snapshot_file": "mod-list.json",
+    "session_meta_file": "meta.json"
   },
   "scheduler": {
     "run_tick_offset": 10,
