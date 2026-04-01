@@ -1,6 +1,6 @@
 {
   "name": "factestio",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "title": "factestio Test Scenario Harness",
   "author": "Xantiloth",
   "description": "A development mod including a custom scenario for running test hierarchies.",
