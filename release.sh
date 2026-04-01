@@ -1,12 +1,24 @@
 #!/usr/bin/env zsh
 set -euo pipefail
 
+# NOTE: this script is non-portable / macOS-specific (mostly due to `sed`
+# syntax) so while Factestio is meant to offer Linux support, this maintainer
+# tooling makes no such effort at this time.
+
 HOMEBREW_TAP_DIR="${HOMEBREW_TAP_DIR:-$HOME/repo/homebrew-tap}"
 FORMULA="$HOMEBREW_TAP_DIR/Formula/factestio.rb"
 
 usage() {
   echo "Usage: $0 [--use-last-commit] --patch|--minor|--major" >&2
   exit 1
+}
+
+replace_formula_field() {
+  local file="$1"
+  local key="$2"
+  local value="$3"
+
+  sed -i '' "s#^  ${key} '.*'#  ${key} '${value}'#" "$file"
 }
 
 latest_tag_for_bump() {
@@ -16,10 +28,13 @@ latest_tag_for_bump() {
   local pattern
 
   case "$bump" in
-    patch) pattern="v${major}.${minor}.*" ;;
-    minor) pattern="v${major}.*" ;;
-    major) pattern="v*" ;;
-    *) echo "Error: unsupported bump level '$bump'" >&2; exit 1 ;;
+  patch) pattern="v${major}.${minor}.*" ;;
+  minor) pattern="v${major}.*" ;;
+  major) pattern="v*" ;;
+  *)
+    echo "Error: unsupported bump level '$bump'" >&2
+    exit 1
+    ;;
   esac
 
   git tag --list "$pattern" --sort=-version:refname | head -1
@@ -30,9 +45,15 @@ USE_LAST_COMMIT=false
 BUMP=''
 for arg in "$@"; do
   case "$arg" in
-    --use-last-commit) USE_LAST_COMMIT=true ;;
-    --patch|--minor|--major) [[ -n "$BUMP" ]] && { echo "Error: specify exactly one of --patch, --minor, --major" >&2; exit 1; }; BUMP="${arg#--}" ;;
-    *) usage ;;
+  --use-last-commit) USE_LAST_COMMIT=true ;;
+  --patch | --minor | --major)
+    [[ -n "$BUMP" ]] && {
+      echo "Error: specify exactly one of --patch, --minor, --major" >&2
+      exit 1
+    }
+    BUMP="${arg#--}"
+    ;;
+  *) usage ;;
   esac
 done
 [[ -z "$BUMP" ]] && usage
@@ -53,7 +74,7 @@ else
   CURRENT="${LATEST#v}"
 fi
 
-IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+IFS='.' read -r MAJOR MINOR PATCH <<<"$CURRENT"
 
 LAST_LEVEL_TAG=$(latest_tag_for_bump "$MAJOR" "$MINOR" "$BUMP")
 if [[ -n "$LAST_LEVEL_TAG" ]]; then
@@ -65,9 +86,16 @@ if [[ -n "$LAST_LEVEL_TAG" ]]; then
 fi
 
 case "$BUMP" in
-  major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
-  minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
-  patch) PATCH=$((PATCH + 1)) ;;
+major)
+  MAJOR=$((MAJOR + 1))
+  MINOR=0
+  PATCH=0
+  ;;
+minor)
+  MINOR=$((MINOR + 1))
+  PATCH=0
+  ;;
+patch) PATCH=$((PATCH + 1)) ;;
 esac
 
 VERSION="v${MAJOR}.${MINOR}.${PATCH}"
@@ -75,13 +103,9 @@ echo "Releasing $VERSION ..."
 
 # Bump version in info.json and rockspec before tagging
 VER="${VERSION#v}"
-python3 -c "
-import json, sys
-with open('info.json') as f: d = json.load(f)
-d['version'] = sys.argv[1]
-with open('info.json', 'w') as f: json.dump(d, f, indent=2)
-print('  info.json -> ' + sys.argv[1])
-" "$VER"
+jq --indent 2 --arg version "$VER" '.version = $version' info.json >info.json.tmp
+mv info.json.tmp info.json
+echo "  info.json -> $VER"
 
 ROCKSPEC_OLD=$(echo factestio-*.rockspec)
 ROCKSPEC_NEW="factestio-${VER}-0.rockspec"
@@ -126,33 +150,16 @@ if [[ ! -f "$FORMULA" ]]; then
 fi
 
 # Replace or insert url/sha256/version in formula (works whether head-only or versioned)
-python3 - "$FORMULA" "$VERSION" "${VERSION#v}" "$SHA256" "$TARBALL_URL" <<'EOF'
-import re, sys
+replace_formula_field "$FORMULA" "url" "$TARBALL_URL"
+replace_formula_field "$FORMULA" "sha256" "$SHA256"
+replace_formula_field "$FORMULA" "version" "${VERSION#v}"
+sed -i '' "/^  head '/d" "$FORMULA"
+echo "Updated formula: $FORMULA"
 
-formula_path, tag, ver, sha256, url = sys.argv[1:]
-
-with open(formula_path) as f:
-  src = f.read()
-
-# Remove existing head line if present
-src = re.sub(r'\n\s*head\s+"[^"]*"[^\n]*\n', '\n', src)
-
-# Remove existing url/sha256/version lines if present
-src = re.sub(r'\n\s*url\s+"https://github\.com/cmtonkinson/factestio/archive[^"]*"[^\n]*\n', '\n', src)
-src = re.sub(r'\n\s*sha256\s+"[a-f0-9]+"[^\n]*\n', '\n', src)
-src = re.sub(r'\n\s*version\s+"[^"]*"[^\n]*\n', '\n', src)
-
-# Insert after the license line
-insert = f'\n  url "{url}"\n  sha256 "{sha256}"\n  version "{ver}"'
-src = re.sub(r'(\n\s*license\s+"[^"]*")', r'\1' + insert, src)
-
-with open(formula_path, 'w') as f:
-  f.write(src)
-
-print(f"Updated formula: {formula_path}")
-EOF
-
-ruby -c "$FORMULA" > /dev/null || { echo "Error: formula syntax check failed" >&2; exit 1; }
+ruby -c "$FORMULA" >/dev/null || {
+  echo "Error: formula syntax check failed" >&2
+  exit 1
+}
 
 # Commit and push the tap
 cd "$HOMEBREW_TAP_DIR"
