@@ -10,10 +10,18 @@ files["scenarios/factestio/control.lua"] = {
   },
 }
 files["scenarios/factestio/src/lib_sandboxed.lua"] = {
+  globals = {
+    "settings",
+  },
   read_globals = {
     "script", "game", "remote", "rendering", "storage",
     "serpent", "defines",
   }
+}
+files["spec/sandboxed_spec.lua"] = {
+  read_globals = {
+    "settings",
+  },
 }
 files["scenarios/factestio/factestio/*.lua"] = {
   globals = {

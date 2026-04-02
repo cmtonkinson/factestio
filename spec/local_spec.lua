@@ -343,9 +343,17 @@ describe("local runner", function()
     F.TEST_TIMEOUT = 1
 
     local commands = {}
+    local process_running = true
     F.cmd = function(fmt, ...)
       local cmd = string.format(fmt, ...)
       table.insert(commands, cmd)
+      if cmd:match("^kill %-0 123") then
+        if process_running then
+          process_running = false
+          return true
+        end
+        return false
+      end
       return true
     end
     F.save_name = function()
@@ -373,10 +381,14 @@ describe("local runner", function()
       end
       return original_io_open(path, mode)
     end
+    local now = 0
     os.time = function() -- luacheck: ignore
-      return 0
+      return now
     end
-    os.execute = function() -- luacheck: ignore
+    os.execute = function(cmd) -- luacheck: ignore
+      if cmd:match("^sleep ") then
+        now = now + 1
+      end
       return true
     end
 

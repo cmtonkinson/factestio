@@ -87,6 +87,33 @@ return function(F)
   end
 
   -----------------------------------------------------------------------------
+  local function wait_for_pid_exit(pid, timeout_seconds)
+    local deadline = os.time() + (timeout_seconds or 5)
+
+    while os.time() <= deadline do
+      if not F.cmd("kill -0 %s 2>/dev/null", pid) then
+        return true
+      end
+      os.execute("sleep " .. tostring(Constants.RUNTIME.POLL_INTERVAL_SECONDS))
+    end
+
+    return not F.cmd("kill -0 %s 2>/dev/null", pid)
+  end
+
+  -----------------------------------------------------------------------------
+  local function stop_factorio_process(pid)
+    if not pid or pid == "" then
+      return
+    end
+
+    F.cmd("kill -TERM %s 2>/dev/null", pid)
+    if not wait_for_pid_exit(pid, 2) then
+      F.cmd("kill -9 %s 2>/dev/null", pid)
+      wait_for_pid_exit(pid, 5)
+    end
+  end
+
+  -----------------------------------------------------------------------------
   function F.exec(node, depth)
     local d = depth or 0
     local indent = string.rep(" ", d * 2)
@@ -241,9 +268,7 @@ return function(F)
     if pid_f then
       local pid = pid_f:read("*a"):gsub("%s+", "")
       pid_f:close()
-      if pid ~= "" then
-        F.cmd("kill -9 %s 2>/dev/null", pid)
-      end
+      stop_factorio_process(pid)
       os.remove(F.PID_FILE)
       os.remove(F.ROOT .. Constants.FACTESTIO.TMP_PID_FILE)
     end

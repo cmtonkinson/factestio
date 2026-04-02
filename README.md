@@ -238,6 +238,30 @@ return {
 }
 ```
 
+The `f` test helper also provides `with_player_settings` for temporarily
+overriding runtime player settings inside a single test callback:
+
+```lua
+paste_to_requester_sets_item_requests = {
+  from = "setup",
+  test = function(f, context)
+    local player = context.player
+
+    f:with_player_settings(player, {
+      ["my-mod-request-size-type"] = "items",
+      ["my-mod-request-size"] = 7,
+    }, function(current_player)
+      -- settings.get_player_settings(current_player.index) now returns the
+      -- merged overrides for this callback only.
+    end)
+  end,
+}
+```
+
+Override values can be passed either as raw values or as `{ value = ... }`
+tables. The original `settings` table is restored automatically even if the
+callback raises an error.
+
 All `factestio/*.lua` files are discovered automatically at runtime, except
 `factestio/config.lua`.
 
