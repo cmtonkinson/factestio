@@ -27,7 +27,7 @@ function Command.run(root, mod_dir, quiet, keep_other_mods)
     end
   end
 
-  local factestio_dir = mod_dir .. "factestio"
+  local factestio_dir = mod_dir .. Constants.FACTESTIO.PROJECT_DIR_NAME
   if not System.realpath(factestio_dir) then
     os.execute("mkdir -p " .. System.shell_quote(factestio_dir))
     if not quiet then

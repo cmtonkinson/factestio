@@ -26,7 +26,7 @@ return function(F)
   function F.discover_test_files()
     assert(type(F.MOD_DIR) == "string" and F.MOD_DIR ~= "", "F.MOD_DIR must be set before loading tests")
 
-    local test_dir = F.MOD_DIR .. "factestio"
+    local test_dir = F.MOD_DIR .. Constants.FACTESTIO.PROJECT_DIR_NAME
     local find_cmd =
       string.format("find %s -maxdepth 1 -type f -name '*.lua' -print 2>/dev/null", F.shell_quote(test_dir))
     local proc = io.popen(find_cmd)
@@ -194,7 +194,7 @@ return function(F)
         error("Failed to write test name file: " .. F.TEST_NAME_FILE)
       end
       launch_args[#launch_args + 1] = "--start-server-load-scenario"
-      launch_args[#launch_args + 1] = "factestio/factestio"
+      launch_args[#launch_args + 1] = Constants.FACTESTIO.SCENARIO_LOAD_TARGET
     else
       -- Child test: copy the parent's save, update the on-disk test manifest,
       -- then load the child save directly (on_load fires, full world state —

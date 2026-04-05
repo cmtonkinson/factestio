@@ -17,6 +17,9 @@ local Constants = {
     VERSION_MINOR = decoded.lua.version_minor,
   },
   FACTESTIO = {
+    PROJECT_DIR_NAME = decoded.factestio.project_dir_name,
+    SCENARIO_PROJECT_LINK = decoded.factestio.scenario_project_link,
+    SCENARIO_LOAD_TARGET = decoded.factestio.scenario_load_target,
     RESULTS_ROOT = decoded.factestio.results_root,
     ROOT_SAVE_NAME = decoded.factestio.root_save_name,
     CHILD_LOAD_BASENAME = decoded.factestio.child_load_basename,

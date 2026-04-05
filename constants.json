@@ -4,6 +4,9 @@
     "version_minor": "5.2"
   },
   "factestio": {
+    "project_dir_name": "factestio",
+    "scenario_project_link": "scenarios/factestio/factestio",
+    "scenario_load_target": "factestio/factestio",
     "results_root": "factestio_results",
     "root_save_name": "root-save.zip",
     "child_load_basename": "factestio-child-load",

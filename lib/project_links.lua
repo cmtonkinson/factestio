@@ -1,3 +1,4 @@
+local Constants = require("lib.constants")
 local System = require("lib.system")
 
 local ProjectLinks = {}
@@ -116,8 +117,10 @@ function ProjectLinks.ensure_sut_symlink(mod_dir, mod_name, data_path, quiet)
 end
 
 function ProjectLinks.ensure_project_symlink(root, mod_dir, quiet)
-  local link_path = root .. "scenarios/factestio/factestio"
-  local expected = (System.realpath(mod_dir) and (System.realpath(mod_dir) .. "/factestio")) or (mod_dir .. "factestio")
+  local link_path = root .. Constants.FACTESTIO.SCENARIO_PROJECT_LINK
+  local expected = (
+    System.realpath(mod_dir) and (System.realpath(mod_dir) .. "/" .. Constants.FACTESTIO.PROJECT_DIR_NAME)
+  ) or (mod_dir .. Constants.FACTESTIO.PROJECT_DIR_NAME)
   return ensure_symlink(
     link_path,
     expected,
@@ -129,7 +132,7 @@ function ProjectLinks.ensure_project_symlink(root, mod_dir, quiet)
 end
 
 function ProjectLinks.remove_project_symlink(root, quiet)
-  local link_path = root .. "scenarios/factestio/factestio"
+  local link_path = root .. Constants.FACTESTIO.SCENARIO_PROJECT_LINK
   return remove_symlink(link_path, "Removed symlink: " .. link_path, quiet)
 end
 
