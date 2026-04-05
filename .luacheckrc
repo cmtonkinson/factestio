@@ -34,7 +34,7 @@ files["scenarios/factestio/factestio/*.lua"] = {
 }
 
 -- Ignore generated/result directories
-exclude_files = { "tmp/**", "results/**", ".luarocks/**" }
+exclude_files = { "tmp/**", "results/**", ".luarocks/**", ".omx/**", ".omc/**" }
 
 -- Allow long lines (Lua idiom)
 max_line_length = 120
