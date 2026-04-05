@@ -338,7 +338,7 @@ describe("local runner", function()
     F.PID_FILE = "/tmp/factestio.pid"
     F.DONE_FILE = "/tmp/factestio.done"
     F.SCRIPT_OUTPUT = "/tmp/script-output/"
-    F.RESULTS_ROOT = "factestio/results"
+    F.RESULTS_ROOT = "factestio_results"
     F.ROOT = "/tmp/factestio/"
     F.TEST_TIMEOUT = 1
 
@@ -357,7 +357,7 @@ describe("local runner", function()
       return true
     end
     F.save_name = function()
-      return "factestio/results/parent/factestio-parent.zip"
+      return "factestio_results/parent/factestio-parent.zip"
     end
 
     local done_reads = 0

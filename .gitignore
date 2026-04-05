@@ -2,7 +2,7 @@ factestio/*
 !factestio/config.lua.example
 !factestio/example.lua
 map.dat
-results/*
+factestio_results/*
 root-save.zip
 scenarios/factestio/script-init.dat
 scenarios/factestio/script.dat

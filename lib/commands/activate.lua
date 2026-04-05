@@ -66,13 +66,22 @@ function Command.run(root, mod_dir, quiet, keep_other_mods)
 
   local gitignore_changed, gitignore_err = System.ensure_lines(factestio_dir .. "/.gitignore", {
     "config.lua",
-    "results/",
   })
   if gitignore_changed == nil then
     return nil, gitignore_err .. "\n"
   end
   if not quiet and gitignore_changed then
     print("Updated: " .. factestio_dir .. "/.gitignore")
+  end
+
+  local root_gitignore_changed, root_gitignore_err = System.ensure_lines(mod_dir .. ".gitignore", {
+    Constants.FACTESTIO.RESULTS_ROOT .. "/",
+  })
+  if root_gitignore_changed == nil then
+    return nil, root_gitignore_err .. "\n"
+  end
+  if not quiet and root_gitignore_changed then
+    print("Updated: " .. mod_dir .. ".gitignore")
   end
 
   if not (binary_ok and data_ok) then

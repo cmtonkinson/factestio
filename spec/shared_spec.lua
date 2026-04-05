@@ -216,12 +216,12 @@ describe("F.save_name", function()
     local parent = Node.new("example", { name = "example" })
     local child = Node.new("test", { name = "test" })
     parent:add(child)
-    assert.equal("factestio/results/example.test/factestio-test.zip", F.save_name(child))
+    assert.equal("factestio_results/example.test/factestio-test.zip", F.save_name(child))
   end)
 
   it("sanitizes dots in node name for the zip filename", function()
     local node = Node.new("example.setup", { name = "example.setup" })
-    assert.equal("factestio/results/example.setup/factestio-example-setup.zip", F.save_name(node))
+    assert.equal("factestio_results/example.setup/factestio-example-setup.zip", F.save_name(node))
   end)
 end)
 
@@ -235,7 +235,7 @@ describe("F.starting_save", function()
     local parent = Node.new("example", { name = "example" })
     local child = Node.new("test", { name = "test" })
     parent:add(child)
-    -- parent's save_name = "factestio/results/example/factestio-example.zip"
+    -- parent's save_name = "factestio_results/example/factestio-example.zip"
     assert.equal(F.save_name(parent), F.starting_save(child))
   end)
 end)

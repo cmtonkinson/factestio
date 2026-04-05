@@ -46,8 +46,8 @@ This will:
 2. Copy `factestio/config.lua.example` to `factestio/config.lua` for you to fill
    in
 3. Copy `factestio/example.lua` as a starting point for your tests
-4. Create or update `factestio/.gitignore` to ignore local config and generated
-   results
+4. Create or update `factestio/.gitignore` to ignore local config, and the
+   project root `.gitignore` to ignore generated `factestio_results/`
 5. Symlink your mod project's `factestio/` into the factestio scenario
 6. Symlink the factestio repo into Factorio's mods directory
 7. Symlink the SUT mod into Factorio's mods directory
@@ -202,11 +202,12 @@ Your mod project's `factestio/` directory contains:
 | `config.lua` | Required. Local Factorio paths (gitignored). |
 | `config.lua.example` | Template for `config.lua`. |
 | `*.lua` | Your test files, one per suite. |
-| `.gitignore` | Created by `factestio activate`; ignores `config.lua` and `results/`. |
-| `results/` | Generated artifacts from the most recent run. |
+| `.gitignore` | Created by `factestio activate`; ignores `config.lua`. |
+| `../factestio_results/` | Generated artifacts from the most recent run. |
 
-`factestio activate` creates `factestio/.gitignore` for you so local config and
-generated results stay out of version control.
+`factestio activate` creates `factestio/.gitignore` for local config and updates
+the project root `.gitignore` so `factestio_results/` stays out of version
+control.
 
 ## Writing tests
 Tests are defined in `factestio/` as Lua files returning a table of named
@@ -340,7 +341,7 @@ Each test runs Factorio headlessly in a fresh process:
 
 At tick +10 the test runs, at tick +20 the world is saved, at tick +30 the
 process signals completion. Results and saves are collected under
-`factestio/results/`.
+`factestio_results/`.
 
 ## Sample project
 A real mod using factestio can be found at

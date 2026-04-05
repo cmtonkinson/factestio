@@ -4,7 +4,7 @@
     "version_minor": "5.2"
   },
   "factestio": {
-    "results_root": "factestio/results",
+    "results_root": "factestio_results",
     "root_save_name": "root-save.zip",
     "child_load_basename": "factestio-child-load",
     "root_save_init_basename": "factestio-root-save-init",

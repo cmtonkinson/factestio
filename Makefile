@@ -3,7 +3,7 @@
 ROCKSPEC := $(lastword $(sort $(wildcard *.rockspec)))
 
 clean:
-	rm -rf factestio/results/* results/* tmp/*
+	rm -rf factestio_results/* results/* tmp/*
 
 deps:
 	luarocks install --only-deps "$(ROCKSPEC)"
