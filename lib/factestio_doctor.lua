@@ -1,26 +1,14 @@
 local Constants = require("lib.constants")
+local Shell = require("lib.shell")
 
 local Doctor = {}
 
-local function trim(s)
-  return (s or ""):gsub("^%s+", ""):gsub("%s+$", "")
-end
-
-local function read_command_output(cmd)
-  local proc = io.popen(cmd .. " 2>/dev/null")
-  if not proc then
+local function read_command_output(command_name)
+  local output = Shell.command_path(command_name)
+  if not output or output == "" then
     return nil
   end
-
-  local output = trim(proc:read("*a"))
-  local ok, _, code = proc:close()
-  local succeeded = (type(ok) == "number" and ok == 0) or ok == true or code == 0
-
-  if not succeeded or output == "" then
-    return nil
-  end
-
-  return output
+  return (output or ""):gsub("^%s+", ""):gsub("%s+$", "")
 end
 
 function Doctor.collect(opts)
@@ -42,11 +30,11 @@ function Doctor.collect(opts)
   local factestio_root = getenv("FACTESTIO_ROOT")
   add(factestio_root ~= nil and factestio_root ~= "", "FACTESTIO_ROOT set", factestio_root or "unset")
 
-  local lua_path = command_output("command -v lua")
+  local lua_path = command_output("lua")
   add(lua_path ~= nil, "lua on PATH", lua_path or "not found")
   add(_VERSION == Constants.LUA.VERSION_STRING, "running under " .. Constants.LUA.VERSION_STRING, _VERSION)
 
-  local luarocks_path = command_output("command -v luarocks")
+  local luarocks_path = command_output("luarocks")
   add(luarocks_path ~= nil, "luarocks on PATH", luarocks_path or "not found")
   if luarocks_path then
     local lua_version = command_output("luarocks config lua_version")

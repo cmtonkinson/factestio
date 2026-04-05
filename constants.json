@@ -4,7 +4,13 @@
     "version_minor": "5.2"
   },
   "factestio": {
+    "factorio_mods_dir_name": "mods",
+    "factorio_mod_list_file_name": "mod-list.json",
+    "factestio_mod_name": "factestio",
+    "factorio_base_mod_name": "base",
     "project_dir_name": "factestio",
+    "project_info_file_name": "info.json",
+    "project_config_module_name": "factestio.config",
     "scenario_project_link": "scenarios/factestio/factestio",
     "scenario_load_target": "factestio/factestio",
     "results_root": "factestio_results",

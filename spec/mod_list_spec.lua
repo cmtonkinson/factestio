@@ -1,5 +1,6 @@
 local Json = require("lib.factestio_json")
 local ModList = require("lib.mod_list")
+local Shell = require("lib.shell")
 local System = require("lib.system")
 
 local function read_json(path)
@@ -9,7 +10,7 @@ end
 
 local function temp_data_path()
   local base = string.format("/tmp/factestio-mod-list-%d-%d/", os.time(), math.random(100000, 999999))
-  assert(os.execute("mkdir -p " .. System.shell_quote(base .. "mods")))
+  assert(Shell.mkdir_p(base .. "mods"))
   return base
 end
 
@@ -60,7 +61,7 @@ describe("ModList", function()
     assert.is_false(restored_mods.b)
     assert.is_nil(restored_mods.factestio)
 
-    os.execute("rm -rf " .. System.shell_quote(data_path))
+    Shell.rm_rf(data_path)
   end)
 
   it("keeps other mods enabled when requested", function()
@@ -91,7 +92,7 @@ describe("ModList", function()
     assert.is_true(mods.factestio)
     assert.is_true(mods.sut)
 
-    os.execute("rm -rf " .. System.shell_quote(data_path))
+    Shell.rm_rf(data_path)
   end)
 
   it("replaces stale session metadata with a fresh baseline", function()
@@ -109,7 +110,7 @@ describe("ModList", function()
 }
 ]]
     ))
-    assert(os.execute("mkdir -p " .. System.shell_quote(session_dir)))
+    assert(Shell.mkdir_p(session_dir))
     assert(System.write_file(
       session_dir .. "/meta.json",
       [[
@@ -141,6 +142,6 @@ describe("ModList", function()
     assert.is_true(restored_mods.fresh)
     assert.is_nil(restored_mods.stale)
 
-    os.execute("rm -rf " .. System.shell_quote(data_path))
+    Shell.rm_rf(data_path)
   end)
 end)

@@ -12,6 +12,7 @@ describe("local loader", function()
   local original_io_popen
   local original_io_open
   local original_script
+  local original_shell_module
   local original_config
   local original_test_files
   local original_test_context
@@ -26,6 +27,7 @@ describe("local loader", function()
     original_io_popen = io.popen
     original_io_open = io.open
     original_script = rawget(_G, "script")
+    original_shell_module = package.loaded["lib.shell"]
     original_config = package.loaded["factestio.config"]
     original_test_files = package.loaded["test_files"]
     original_test_context = package.loaded["test_context"]
@@ -41,6 +43,7 @@ describe("local loader", function()
     io.popen = original_io_popen -- luacheck: ignore
     io.open = original_io_open -- luacheck: ignore
     _G.script = original_script
+    package.loaded["lib.shell"] = original_shell_module
     _G.require = original_require
     package.loaded["factestio.config"] = original_config
     package.loaded["test_files"] = original_test_files
@@ -53,31 +56,21 @@ describe("local loader", function()
   end)
 
   it("discovers test files from the mod factestio directory", function()
+    package.loaded["lib.shell"] = {
+      find_files = function(path, pattern)
+        assert.equal("/tmp/mod/factestio", path)
+        assert.equal("*.lua", pattern)
+        return {
+          "/tmp/mod/factestio/zeta.lua",
+          "/tmp/mod/factestio/config.lua",
+          "/tmp/mod/factestio/alpha.lua",
+        }
+      end,
+    }
     local F = new_local_F()
     F.MOD_DIR = "/tmp/mod/"
 
-    local seen_cmd
-    io.popen = function(cmd) -- luacheck: ignore
-      seen_cmd = cmd
-      local lines = {
-        "/tmp/mod/factestio/zeta.lua",
-        "/tmp/mod/factestio/config.lua",
-        "/tmp/mod/factestio/alpha.lua",
-      }
-      local i = 0
-      return {
-        lines = function()
-          return function()
-            i = i + 1
-            return lines[i]
-          end
-        end,
-        close = function() end,
-      }
-    end
-
     assert.same({ "alpha", "zeta" }, F.discover_test_files())
-    assert.equal("find '/tmp/mod/factestio' -maxdepth 1 -type f -name '*.lua' -print 2>/dev/null", seen_cmd)
   end)
 
   it("writes the discovered file manifest as a Lua module", function()
@@ -328,6 +321,68 @@ describe("local runner", function()
   end)
 
   it("launches child scenarios without child save rewrites", function()
+    local shell_commands = {}
+    local process_running = true
+    local now = 0
+    package.loaded["lib.shell"] = {
+      quote = function(value)
+        return "'" .. tostring(value) .. "'"
+      end,
+      rm_rf = function(path)
+        table.insert(shell_commands, { op = "rm_rf", path = path })
+        return true
+      end,
+      mkdir_p = function(path)
+        table.insert(shell_commands, { op = "mkdir_p", path = path })
+        return true
+      end,
+      test_exists = function(path)
+        table.insert(shell_commands, { op = "test_exists", path = path })
+        return true
+      end,
+      mv = function(source_path, target_path)
+        table.insert(shell_commands, { op = "mv", source = source_path, target = target_path })
+        return true
+      end,
+      is_pid_alive = function(pid)
+        table.insert(shell_commands, { op = "is_pid_alive", pid = pid })
+        if process_running then
+          process_running = false
+          return true
+        end
+        return false
+      end,
+      sleep = function(seconds)
+        now = now + seconds
+        table.insert(shell_commands, { op = "sleep", seconds = seconds })
+        return true
+      end,
+      kill = function(pid, signal)
+        table.insert(shell_commands, { op = "kill", pid = pid, signal = signal })
+        return true
+      end,
+      cp = function(source_path, target_path)
+        table.insert(shell_commands, { op = "cp", source = source_path, target = target_path })
+        return true
+      end,
+      launch_background = function(argv, stdout_path, pid_path, root_pid_path)
+        table.insert(shell_commands, {
+          op = "launch_background",
+          argv = argv,
+          stdout_path = stdout_path,
+          pid_path = pid_path,
+          root_pid_path = root_pid_path,
+        })
+        return true
+      end,
+      rm_f = function(path)
+        table.insert(shell_commands, { op = "rm_f", path = path })
+        return true
+      end,
+      find_files = function()
+        return {}
+      end,
+    }
     local F = new_local_F()
     F.FACTORIO_BINARY = "/bin/factorio"
     F.FACTORIO_DATA_PATH = "/tmp/factorio/"
@@ -342,20 +397,6 @@ describe("local runner", function()
     F.ROOT = "/tmp/factestio/"
     F.TEST_TIMEOUT = 1
 
-    local commands = {}
-    local process_running = true
-    F.cmd = function(fmt, ...)
-      local cmd = string.format(fmt, ...)
-      table.insert(commands, cmd)
-      if cmd:match("^kill %-0 123") then
-        if process_running then
-          process_running = false
-          return true
-        end
-        return false
-      end
-      return true
-    end
     F.save_name = function()
       return "factestio_results/parent/factestio-parent.zip"
     end
@@ -381,7 +422,6 @@ describe("local runner", function()
       end
       return original_io_open(path, mode)
     end
-    local now = 0
     os.time = function() -- luacheck: ignore
       return now
     end
@@ -404,10 +444,25 @@ describe("local runner", function()
 
     F.start_factorio(child)
 
-    assert.is_truthy(commands[1]:match([[^cp "]]) or commands[1]:match("^cp '"))
-    assert.is_truthy(commands[2]:find("/tmp/test_name.lua", 1, true))
-    assert.is_truthy(commands[2]:find("child", 1, true))
-    assert.is_truthy(table.concat(commands, "\n"):find("sh %-c '", 1, false))
-    assert.is_nil(table.concat(commands, "\n"):match("zipfile"))
+    assert.same({
+      op = "cp",
+      source = "factestio_results/parent/factestio-parent.zip",
+      target = "/tmp/factorio/saves/factestio-child-load.zip",
+    }, shell_commands[1])
+    assert.same({
+      op = "launch_background",
+      argv = {
+        "/bin/factorio",
+        "--start-server",
+        "factestio-child-load",
+        "--server-settings",
+        "/tmp/server-settings.json",
+        "--disable-audio",
+        "--nogamepad",
+      },
+      stdout_path = "/tmp/stdout.log",
+      pid_path = "/tmp/factestio.pid",
+      root_pid_path = "/tmp/factestio/tmp/factestio.pid",
+    }, shell_commands[2])
   end)
 end)

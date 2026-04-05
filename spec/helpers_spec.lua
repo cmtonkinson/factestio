@@ -1,48 +1,47 @@
-local F = {}
-require("scenarios.factestio.src.lib_helpers")(F)
+local Shell = require("lib.shell")
 
-describe("F.shell_quote", function()
+describe("Shell.quote", function()
   it("wraps a plain string in single quotes", function()
-    assert.are.equal("'hello'", F.shell_quote("hello"))
+    assert.are.equal("'hello'", Shell.quote("hello"))
   end)
 
   it("wraps an empty string in single quotes", function()
-    assert.are.equal("''", F.shell_quote(""))
+    assert.are.equal("''", Shell.quote(""))
   end)
 
   it("escapes an internal single quote", function()
-    assert.are.equal("'it'\\''s'", F.shell_quote("it's"))
+    assert.are.equal("'it'\\''s'", Shell.quote("it's"))
   end)
 
   it("wraps a string with spaces in single quotes", function()
-    assert.are.equal("'hello world'", F.shell_quote("hello world"))
+    assert.are.equal("'hello world'", Shell.quote("hello world"))
   end)
 
   it("wraps a string containing double quotes in single quotes", function()
-    assert.are.equal("'say \"hi\"'", F.shell_quote('say "hi"'))
+    assert.are.equal("'say \"hi\"'", Shell.quote('say "hi"'))
   end)
 
   it("safely wraps a string with shell metacharacter $", function()
-    assert.are.equal("'$HOME'", F.shell_quote("$HOME"))
+    assert.are.equal("'$HOME'", Shell.quote("$HOME"))
   end)
 
   it("safely wraps a string with shell metacharacter !", function()
-    assert.are.equal("'!foo'", F.shell_quote("!foo"))
+    assert.are.equal("'!foo'", Shell.quote("!foo"))
   end)
 
   it("safely wraps a string with shell metacharacter `", function()
-    assert.are.equal("'`cmd`'", F.shell_quote("`cmd`"))
+    assert.are.equal("'`cmd`'", Shell.quote("`cmd`"))
   end)
 
   it("safely wraps a string with shell metacharacter ;", function()
-    assert.are.equal("'a;b'", F.shell_quote("a;b"))
+    assert.are.equal("'a;b'", Shell.quote("a;b"))
   end)
 
   it("converts a number to string and wraps in single quotes", function()
-    assert.are.equal("'42'", F.shell_quote(42))
+    assert.are.equal("'42'", Shell.quote(42))
   end)
 
   it("preserves a backslash inside single quotes", function()
-    assert.are.equal("'a\\b'", F.shell_quote("a\\b"))
+    assert.are.equal("'a\\b'", Shell.quote("a\\b"))
   end)
 end)

@@ -1,11 +1,12 @@
 return function(F)
   local Constants = require("lib.constants")
+  local Shell = require("lib.shell")
+  local System = require("lib.system")
   -- Since this code isn't running within Factorio, we can use whatever libraries
   -- and OS calls we want
   local io = require("io")
   local json = require("lib.factestio_json")
   local os = require("os")
-  local unpack_args = table.unpack or rawget(_G, "unpack")
 
   F.start_time = 0
   F.end_time = 0
@@ -27,18 +28,7 @@ return function(F)
     assert(type(F.MOD_DIR) == "string" and F.MOD_DIR ~= "", "F.MOD_DIR must be set before loading tests")
 
     local test_dir = F.MOD_DIR .. Constants.FACTESTIO.PROJECT_DIR_NAME
-    local find_cmd =
-      string.format("find %s -maxdepth 1 -type f -name '*.lua' -print 2>/dev/null", F.shell_quote(test_dir))
-    local proc = io.popen(find_cmd)
-    if not proc then
-      error("Error: could not scan " .. test_dir .. " for test files")
-    end
-
-    local paths = {}
-    for line in proc:lines() do
-      table.insert(paths, line)
-    end
-    proc:close()
+    local paths = Shell.find_files(test_dir, "*.lua")
 
     return F.discovered_test_files(paths)
   end
@@ -62,8 +52,8 @@ return function(F)
   function F.run(roots)
     local results_dir = F.RESULTS_ROOT
     -- Clean up results from the last run.
-    F.cmd('rm -rf "%s"', results_dir)
-    F.cmd('mkdir -p "%s"', results_dir)
+    Shell.rm_rf(results_dir)
+    Shell.mkdir_p(results_dir)
     os.remove(F.ROOT .. Constants.FACTESTIO.TMP_INTERRUPT_FILE)
     -- Kick off the root scenarios.
     F.start_time = os.time()
@@ -79,10 +69,10 @@ return function(F)
 
   -----------------------------------------------------------------------------
   local function move_if_exists(source_path, target_path)
-    if not source_path or not F.cmd('test -e "%s"', source_path) then
+    if not source_path or not Shell.test_exists(source_path) then
       return false
     end
-    F.cmd('mv "%s" "%s"', source_path, target_path)
+    Shell.mv(source_path, target_path)
     return true
   end
 
@@ -91,13 +81,13 @@ return function(F)
     local deadline = os.time() + (timeout_seconds or 5)
 
     while os.time() <= deadline do
-      if not F.cmd("kill -0 %s 2>/dev/null", pid) then
+      if not Shell.is_pid_alive(pid) then
         return true
       end
-      os.execute("sleep " .. tostring(Constants.RUNTIME.POLL_INTERVAL_SECONDS))
+      Shell.sleep(Constants.RUNTIME.POLL_INTERVAL_SECONDS)
     end
 
-    return not F.cmd("kill -0 %s 2>/dev/null", pid)
+    return not Shell.is_pid_alive(pid)
   end
 
   -----------------------------------------------------------------------------
@@ -106,9 +96,9 @@ return function(F)
       return
     end
 
-    F.cmd("kill -TERM %s 2>/dev/null", pid)
+    Shell.kill(pid, "TERM")
     if not wait_for_pid_exit(pid, 2) then
-      F.cmd("kill -9 %s 2>/dev/null", pid)
+      Shell.kill(pid, "9")
       wait_for_pid_exit(pid, 5)
     end
   end
@@ -170,15 +160,6 @@ return function(F)
   end
 
   -----------------------------------------------------------------------------
-  local function shell_words(args)
-    local quoted = {}
-    for _, arg in ipairs(args) do
-      quoted[#quoted + 1] = F.shell_quote(arg)
-    end
-    return table.concat(quoted, " ")
-  end
-
-  -----------------------------------------------------------------------------
   function F.start_factorio(node)
     -- Build the Factorio launch command.
     -- Root tests (no parent): start a fresh world from the scenario on disk.
@@ -189,7 +170,7 @@ return function(F)
     if not node.parent then
       -- Root test: write the test name to disk so control.lua can require() it,
       -- then load the scenario fresh (on_init fires, brand-new world).
-      local ok = F.cmd('echo return \'"%s"\' > "%s"', node.data.name, F.TEST_NAME_FILE)
+      local ok = System.write_file(F.TEST_NAME_FILE, string.format("return %q\n", node.data.name))
       if not ok then
         error("Failed to write test name file: " .. F.TEST_NAME_FILE)
       end
@@ -201,11 +182,11 @@ return function(F)
       -- entities, map, storage — is restored from the zip).
       local parent_zip = F.save_name(node.parent)
       local child_zip = F.FACTORIO_DATA_PATH .. "saves/" .. Constants.FACTESTIO.CHILD_LOAD_BASENAME .. ".zip"
-      local cp_ok = F.cmd('cp "%s" "%s"', parent_zip, child_zip)
+      local cp_ok = Shell.cp(parent_zip, child_zip)
       if not cp_ok then
         error("Failed to copy parent save: " .. parent_zip)
       end
-      local ok = F.cmd('echo return \'"%s"\' > "%s"', node.data.name, F.TEST_NAME_FILE)
+      local ok = System.write_file(F.TEST_NAME_FILE, string.format("return %q\n", node.data.name))
       if not ok then
         error("Failed to write test name file: " .. F.TEST_NAME_FILE)
       end
@@ -214,28 +195,14 @@ return function(F)
     end
 
     -- Start the headless server in the background. Redirect output to log files.
-    F.cmd('> "%s"', F.TEST_STDOUT)
-    F.cmd('> "%s"', F.TEST_STDERR)
+    System.write_file(F.TEST_STDOUT, "")
+    System.write_file(F.TEST_STDERR, "")
     launch_args[#launch_args + 1] = "--server-settings"
     launch_args[#launch_args + 1] = F.SETTINGS
     launch_args[#launch_args + 1] = "--disable-audio"
     launch_args[#launch_args + 1] = "--nogamepad"
-    local launch_ok = F.cmd(
-      "sh -c '"
-        .. 'trap "" INT TERM; '
-        .. "stdout_path=$1; pid_path=$2; root_pid_path=$3; shift 3; "
-        .. '"$@" > "$stdout_path" 2>&1 & '
-        .. "PID=$!; "
-        .. 'echo "$PID" > "$pid_path"; '
-        .. 'echo "$PID" > "$root_pid_path"'
-        .. "' sh %s",
-      shell_words({
-        F.TEST_STDOUT,
-        F.PID_FILE,
-        F.ROOT .. Constants.FACTESTIO.TMP_PID_FILE,
-        unpack_args(launch_args),
-      })
-    )
+    local launch_ok =
+      Shell.launch_background(launch_args, F.TEST_STDOUT, F.PID_FILE, F.ROOT .. Constants.FACTESTIO.TMP_PID_FILE)
     if not launch_ok then
       error("Failed to launch Factorio process")
     end
@@ -249,7 +216,7 @@ return function(F)
         done = true
         f:close()
       else
-        os.execute("sleep " .. tostring(Constants.RUNTIME.POLL_INTERVAL_SECONDS))
+        Shell.sleep(Constants.RUNTIME.POLL_INTERVAL_SECONDS)
       end
     end
 
@@ -277,7 +244,7 @@ return function(F)
     local fqn = F.fully_qualified_name(node)
     local results_dir = F.RESULTS_ROOT .. "/" .. fqn .. "/"
     local save = F.FACTORIO_DATA_PATH .. "saves/factestio-" .. F.safe_save_name(node.data.name) .. ".zip"
-    F.cmd('mkdir -p "%s"', results_dir)
+    Shell.mkdir_p(results_dir)
     move_if_exists(save, results_dir .. "factestio-" .. F.safe_save_name(node.data.name) .. ".zip")
     move_if_exists(F.TEST_STDOUT, results_dir .. "stdout.txt")
     move_if_exists(F.TEST_STDERR, results_dir .. "stderr.txt")
@@ -289,9 +256,9 @@ return function(F)
     end
 
     -- Clean up transient files.
-    F.cmd('rm -f "%s"', F.TEST_NAME_FILE)
-    F.cmd('rm -f "%s"', F.DONE_FILE)
-    F.cmd('rm -f "%s"', F.FACTORIO_DATA_PATH .. "saves/" .. Constants.FACTESTIO.CHILD_LOAD_BASENAME .. ".zip")
+    Shell.rm_f(F.TEST_NAME_FILE)
+    Shell.rm_f(F.DONE_FILE)
+    Shell.rm_f(F.FACTORIO_DATA_PATH .. "saves/" .. Constants.FACTESTIO.CHILD_LOAD_BASENAME .. ".zip")
 
     return
   end

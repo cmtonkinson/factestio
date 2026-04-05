@@ -3,6 +3,7 @@ local FactorioPaths = require("lib.factorio_paths")
 local ModList = require("lib.mod_list")
 local ProjectConfig = require("lib.project_config")
 local ProjectLinks = require("lib.project_links")
+local Shell = require("lib.shell")
 local System = require("lib.system")
 
 local Command = {}
@@ -28,8 +29,8 @@ function Command.run(root, mod_dir, quiet, keep_other_mods)
   end
 
   local factestio_dir = mod_dir .. Constants.FACTESTIO.PROJECT_DIR_NAME
-  if not System.realpath(factestio_dir) then
-    os.execute("mkdir -p " .. System.shell_quote(factestio_dir))
+  if not Shell.realpath(factestio_dir) then
+    Shell.mkdir_p(factestio_dir)
     if not quiet then
       print("Created directory: " .. factestio_dir)
     end
@@ -58,7 +59,7 @@ function Command.run(root, mod_dir, quiet, keep_other_mods)
   local example_dst = factestio_dir .. "/example.lua"
   if not already_initialized and not System.exists(example_dst) then
     local example_src = root .. "factestio/example.lua"
-    os.execute("cp " .. System.shell_quote(example_src) .. " " .. System.shell_quote(example_dst))
+    Shell.cp(example_src, example_dst)
     if not quiet then
       print("Created: " .. example_dst)
     end
@@ -94,7 +95,8 @@ function Command.run(root, mod_dir, quiet, keep_other_mods)
 
   local sut_name = ProjectConfig.name(mod_dir)
   if not sut_name then
-    return nil, "Error: could not determine mod name from " .. mod_dir .. "info.json\n"
+    return nil,
+      "Error: could not determine mod name from " .. mod_dir .. Constants.FACTESTIO.PROJECT_INFO_FILE_NAME .. "\n"
   end
 
   local detected_data = System.ensure_trailing_slash(guessed_data)
@@ -140,19 +142,22 @@ function Command.run(root, mod_dir, quiet, keep_other_mods)
   local tmp_save_path = tmp_save_base .. ".zip"
   local map_gen = root .. Constants.FACTESTIO.MAP_GEN_SETTINGS_FILE
   local stdout_log = root .. Constants.FACTESTIO.TMP_SETUP_STDOUT
-  os.execute("mkdir -p " .. System.shell_quote(root .. "tmp"))
+  Shell.mkdir_p(root .. "tmp")
 
-  local create_cmd = string.format(
-    '"%s" --create "%s" --map-gen-settings "%s" --disable-audio --nogamepad > "%s" 2>&1',
-    guessed_binary,
+  local create_ok = Shell.succeeds(guessed_binary, {
+    "--create",
     tmp_save_base,
+    "--map-gen-settings",
     map_gen,
-    stdout_log
-  )
-  local create_ok = os.execute(create_cmd)
+    "--disable-audio",
+    "--nogamepad",
+  }, {
+    stdout_path = stdout_log,
+    stderr_to_stdout = true,
+  })
 
   if create_ok and System.exists(tmp_save_path) then
-    os.execute("mv " .. System.shell_quote(tmp_save_path) .. " " .. System.shell_quote(root_save))
+    Shell.mv(tmp_save_path, root_save)
     if not quiet then
       print("Created root-save.zip")
     end

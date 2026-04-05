@@ -7,21 +7,6 @@ function System.ensure_trailing_slash(path)
   return path
 end
 
-function System.shell_quote(s)
-  return "'" .. tostring(s):gsub("'", "'\\''") .. "'"
-end
-
-function System.command_succeeds(cmd)
-  local ok, _, code = os.execute(cmd)
-  if type(ok) == "number" then
-    return ok == 0
-  end
-  if ok == true then
-    return true
-  end
-  return code == 0
-end
-
 function System.exists(path)
   local f = io.open(path, "r")
   if f then
@@ -29,24 +14,6 @@ function System.exists(path)
     return true
   end
   return false
-end
-
-function System.lexists(path)
-  return System.command_succeeds("test -e " .. System.shell_quote(path) .. " -o -L " .. System.shell_quote(path))
-end
-
-function System.symlink_target(path)
-  local f = io.popen("readlink " .. System.shell_quote(path) .. " 2>/dev/null")
-  local result = f:read("*a"):gsub("\n$", "")
-  f:close()
-  return result ~= "" and result or nil
-end
-
-function System.realpath(path)
-  local f = io.popen("cd " .. System.shell_quote(path) .. " 2>/dev/null && pwd")
-  local result = f:read("*a"):gsub("\n$", "")
-  f:close()
-  return result ~= "" and result or nil
 end
 
 function System.ensure_lines(path, entries)

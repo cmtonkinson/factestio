@@ -1,15 +1,19 @@
 local Constants = require("lib.constants")
 local Json = require("lib.factestio_json")
+local Shell = require("lib.shell")
 local System = require("lib.system")
 
 local ModList = {}
 
 local function mod_list_path(data_path)
-  return data_path .. "mods/mod-list.json"
+  return data_path
+    .. Constants.FACTESTIO.FACTORIO_MODS_DIR_NAME
+    .. "/"
+    .. Constants.FACTESTIO.FACTORIO_MOD_LIST_FILE_NAME
 end
 
 local function session_dir(data_path)
-  return data_path .. "mods/" .. Constants.FACTESTIO.SESSION_DIR .. "/"
+  return data_path .. Constants.FACTESTIO.FACTORIO_MODS_DIR_NAME .. "/" .. Constants.FACTESTIO.SESSION_DIR .. "/"
 end
 
 local function session_snapshot_path(data_path)
@@ -21,7 +25,7 @@ local function session_meta_path(data_path)
 end
 
 local function ensure_session_dir(data_path)
-  return System.command_succeeds("mkdir -p " .. System.shell_quote(session_dir(data_path)))
+  return Shell.mkdir_p(session_dir(data_path))
 end
 
 local function session_meta(data_path)
@@ -44,15 +48,18 @@ local function write_session_meta(data_path, active_mod_name, had_mod_list)
     return nil, "Error: could not create factestio session directory\n"
   end
 
-  local cmd = string.format(
-    "jq -n --arg active_mod_name %s "
-      .. "--argjson had_mod_list %s "
-      .. "'{active_mod_name:$active_mod_name,had_mod_list:$had_mod_list}' > %s",
-    System.shell_quote(active_mod_name),
-    had_mod_list and "true" or "false",
-    System.shell_quote(session_meta_path(data_path))
-  )
-  if not System.command_succeeds(cmd) then
+  if
+    not Shell.write_output(session_meta_path(data_path), "jq", {
+      "-n",
+      "--arg",
+      "active_mod_name",
+      active_mod_name,
+      "--argjson",
+      "had_mod_list",
+      had_mod_list and "true" or "false",
+      "{active_mod_name:$active_mod_name,had_mod_list:$had_mod_list}",
+    })
+  then
     return nil, "Error: could not write factestio session metadata\n"
   end
 
@@ -65,33 +72,33 @@ local function mod_enabled_named(data_path, mod_name)
     return false
   end
 
-  local cmd = string.format(
-    "jq -e --arg mod_name %s '.mods[]? | select(.name == $mod_name and .enabled == true)' %s >/dev/null 2>&1",
-    System.shell_quote(mod_name),
-    System.shell_quote(path)
-  )
-  return System.command_succeeds(cmd)
+  return Shell.succeeds("jq", {
+    "-e",
+    "--arg",
+    "mod_name",
+    mod_name,
+    ".mods[]? | select(.name == $mod_name and .enabled == true)",
+    path,
+  }, {
+    stdout_path = "/dev/null",
+    stderr_to_devnull = true,
+  })
 end
 
 local function apply_filter(path, filter, args)
   local tmp_path = path .. ".tmp"
-  local segments = { "jq" }
-
+  local jq_args = {}
   for _, arg in ipairs(args or {}) do
-    segments[#segments + 1] = arg
+    jq_args[#jq_args + 1] = arg
   end
-  segments[#segments + 1] = System.shell_quote(filter)
-  segments[#segments + 1] = System.shell_quote(path)
+  jq_args[#jq_args + 1] = filter
+  jq_args[#jq_args + 1] = path
 
-  local cmd = table.concat(segments, " ")
-    .. " > "
-    .. System.shell_quote(tmp_path)
-    .. " && mv "
-    .. System.shell_quote(tmp_path)
-    .. " "
-    .. System.shell_quote(path)
+  if not Shell.write_output(tmp_path, "jq", jq_args) then
+    return false
+  end
 
-  return System.command_succeeds(cmd)
+  return Shell.mv(tmp_path, path)
 end
 
 local function set_mod_enabled(data_path, mod_name, enabled)
@@ -112,7 +119,9 @@ local function set_mod_enabled(data_path, mod_name, enabled)
     enabled_literal
   )
   if not apply_filter(path, filter, {
-    "--arg mod_name " .. System.shell_quote(mod_name),
+    "--arg",
+    "mod_name",
+    mod_name,
   }) then
     return nil, "Error: could not update mod-list.json at " .. path .. "\n"
   end
@@ -141,7 +150,7 @@ function ModList.begin_session(data_path, active_mod_name)
       return write_session_meta(data_path, active_mod_name, meta.had_mod_list == true)
     end
 
-    os.execute("rm -rf " .. System.shell_quote(session_dir(data_path)))
+    Shell.rm_rf(session_dir(data_path))
   end
 
   local mod_list_exists, path = ModList.read(data_path)
@@ -151,9 +160,7 @@ function ModList.begin_session(data_path, active_mod_name)
     if not ensure_session_dir(data_path) then
       return nil, "Error: could not create factestio session directory\n"
     end
-    local copy_cmd =
-      string.format("cp %s %s", System.shell_quote(path), System.shell_quote(session_snapshot_path(data_path)))
-    if not System.command_succeeds(copy_cmd) then
+    if not Shell.cp(path, session_snapshot_path(data_path)) then
       return nil, "Error: could not snapshot mod-list.json at " .. path .. "\n"
     end
   end
@@ -203,7 +210,9 @@ function ModList.activate(data_path, sut_name, keep_other_mods, quiet)
   end
 
   if not apply_filter(path, filter, {
-    "--arg sut_name " .. System.shell_quote(sut_name),
+    "--arg",
+    "sut_name",
+    sut_name,
   }) then
     return nil, "Error: could not update mod-list.json at " .. path .. "\n"
   end
@@ -225,16 +234,14 @@ function ModList.deactivate(data_path, sut_name, quiet)
 
   if meta then
     if meta.had_mod_list and System.exists(session_snapshot_path(data_path)) then
-      local restore_cmd =
-        string.format("cp %s %s", System.shell_quote(session_snapshot_path(data_path)), System.shell_quote(path))
-      if not System.command_succeeds(restore_cmd) then
+      if not Shell.cp(session_snapshot_path(data_path), path) then
         return nil, "Error: could not restore mod-list.json at " .. path .. "\n"
       end
     elseif not meta.had_mod_list and System.exists(path) then
-      os.execute("rm -f " .. System.shell_quote(path))
+      Shell.rm_f(path)
     end
 
-    os.execute("rm -rf " .. System.shell_quote(session_dir(data_path)))
+    Shell.rm_rf(session_dir(data_path))
     if not quiet then
       print("Restored original mod-list.json state")
     end

@@ -17,7 +17,13 @@ local Constants = {
     VERSION_MINOR = decoded.lua.version_minor,
   },
   FACTESTIO = {
+    FACTORIO_MODS_DIR_NAME = decoded.factestio.factorio_mods_dir_name,
+    FACTORIO_MOD_LIST_FILE_NAME = decoded.factestio.factorio_mod_list_file_name,
+    FACTESTIO_MOD_NAME = decoded.factestio.factestio_mod_name,
+    FACTORIO_BASE_MOD_NAME = decoded.factestio.factorio_base_mod_name,
     PROJECT_DIR_NAME = decoded.factestio.project_dir_name,
+    PROJECT_INFO_FILE_NAME = decoded.factestio.project_info_file_name,
+    PROJECT_CONFIG_MODULE_NAME = decoded.factestio.project_config_module_name,
     SCENARIO_PROJECT_LINK = decoded.factestio.scenario_project_link,
     SCENARIO_LOAD_TARGET = decoded.factestio.scenario_load_target,
     RESULTS_ROOT = decoded.factestio.results_root,

@@ -21,8 +21,8 @@ describe("Doctor.collect", function()
       end,
       command_output = function(cmd)
         local outputs = {
-          ["command -v lua"] = "/usr/bin/lua",
-          ["command -v luarocks"] = "/usr/bin/luarocks",
+          lua = "/usr/bin/lua",
+          luarocks = "/usr/bin/luarocks",
           ["luarocks config lua_version"] = "5.2",
         }
         return outputs[cmd]
