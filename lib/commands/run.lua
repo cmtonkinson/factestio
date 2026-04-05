@@ -21,7 +21,7 @@ function Command.run(root, mod_dir, data_path, debug, timeout, seed, leaf, branc
     end
 
     if not ModList.enabled(data_path) then
-      io.stderr:write("Warning: factestio is not enabled in mod-list.json. Run `factestio activate` first.\n")
+      return nil, "Error: factestio is not enabled in mod-list.json. Run `factestio activate` first.\n"
     end
   end
 
