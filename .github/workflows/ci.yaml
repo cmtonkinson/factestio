@@ -29,8 +29,11 @@ jobs:
       - name: Install hererocks
         run: pip install hererocks
 
+      # stylua gates syntax variants behind cargo features, and the default set
+      # omits lua52 -- without it stylua.toml's `syntax = "Lua52"` is rejected.
+      # Homebrew builds with --all-features, which is why this only bites in CI.
       - name: Install stylua
-        run: cargo install stylua
+        run: cargo install stylua --features lua52
 
       - name: Install Lua toolchain and dependencies
         run: make deps
