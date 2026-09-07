@@ -13,8 +13,11 @@ describe("Json.decode", function()
   end)
 
   it("errors with the source path on invalid JSON", function()
-    assert.has_error(function()
-      Json.decode("{invalid", "results.json")
-    end, "Error: could not decode JSON from results.json: no valid JSON value at line 1, column 2")
+    -- Match only factestio's own message format. The reason is dkjson's wording,
+    -- which varies across the versions the rockspec allows.
+    local ok, err = pcall(Json.decode, "{invalid", "results.json")
+
+    assert.is_false(ok)
+    assert.matches("Error: could not decode JSON from results%.json: .+", err)
   end)
 end)

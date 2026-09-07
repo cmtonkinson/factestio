@@ -1,3 +1,4 @@
+.hererocks/
 factestio/*
 !factestio/config.lua.example
 !factestio/example.lua
