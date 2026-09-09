@@ -16,8 +16,8 @@ function Cli.write_help(stream, version)
     "  doctor          Validate the Lua " .. Constants.LUA.VERSION_MINOR .. " and LuaRocks shell environment\n"
   )
   stream:write("  list            Show the compiled scenario DAG\n")
-  stream:write("  activate        Scaffold and activate factestio for the target mod project\n")
-  stream:write("  deactivate      Restore the pre-activate mod-list state and remove factestio links\n")
+  stream:write("  activate, on    Scaffold and activate factestio for the target mod project\n")
+  stream:write("  deactivate, off Restore the pre-activate mod-list state and remove factestio links\n")
   stream:write("\n")
   stream:write("Run Options:\n")
   stream:write("  -d, --debug     Print debug output while running tests\n")
@@ -45,6 +45,8 @@ function Cli.write_help(stream, version)
   stream:write("  factestio list --children regressions.setup\n")
   stream:write("  factestio activate /path/to/mod\n")
   stream:write("  factestio activate --keep-other-mods /path/to/mod\n")
+  stream:write("  factestio on /path/to/mod\n")
+  stream:write("  factestio off\n")
   stream:write("  factestio --leaf basic.setup\n")
   stream:write("  factestio --branch regressions.setup\n")
   stream:write("  factestio --seed 12345 --debug --timeout 15 /path/to/mod\n")
@@ -91,9 +93,9 @@ function Cli.parse(argv)
       args.doctor = true
     elseif current == "list" then
       args.list = true
-    elseif current == "activate" then
+    elseif current == "activate" or current == "on" then
       args.activate = true
-    elseif current == "deactivate" then
+    elseif current == "deactivate" or current == "off" then
       args.deactivate = true
     elseif current == "--keep-other-mods" then
       args.keep_other_mods = true

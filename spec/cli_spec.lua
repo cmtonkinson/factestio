@@ -62,6 +62,47 @@ describe("Cli.parse", function()
     assert.matches("mutually exclusive", err.message)
   end)
 
+  it("accepts on as an alias for activate", function()
+    local parsed = assert(Cli.parse({ "on", "/tmp/mod" }))
+
+    assert.equal("activate", parsed.action)
+    assert.equal("/tmp/mod/", parsed.mod_dir)
+  end)
+
+  it("accepts off as an alias for deactivate", function()
+    local parsed = assert(Cli.parse({ "off", "/tmp/mod" }))
+
+    assert.equal("deactivate", parsed.action)
+    assert.equal("/tmp/mod/", parsed.mod_dir)
+  end)
+
+  it("accepts activate flags alongside the on alias", function()
+    local parsed = assert(Cli.parse({ "on", "--keep-other-mods", "--quiet" }))
+
+    assert.equal("activate", parsed.action)
+    assert.is_true(parsed.keep_other_mods)
+    assert.is_true(parsed.quiet)
+  end)
+
+  it("treats the aliases as the commands they stand for when checking exclusivity", function()
+    local parsed, err = Cli.parse({ "on", "off" })
+
+    assert.is_nil(parsed)
+    assert.matches("mutually exclusive", err.message)
+
+    parsed, err = Cli.parse({ "on", "deactivate" })
+
+    assert.is_nil(parsed)
+    assert.matches("mutually exclusive", err.message)
+  end)
+
+  it("still rejects keep-other-mods when off is the command", function()
+    local parsed, err = Cli.parse({ "off", "--keep-other-mods" })
+
+    assert.is_nil(parsed)
+    assert.matches("only applies to activate", err.message)
+  end)
+
   it("rejects list-only flags outside list", function()
     local parsed, err = Cli.parse({ "--roots" })
 

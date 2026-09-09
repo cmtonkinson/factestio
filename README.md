@@ -140,10 +140,11 @@ factestio doctor
 ```
 
 #### `activate`
-Scaffold and activate factestio for this mod project.
+Scaffold and activate factestio for this mod project. `on` is an alias for it.
 
 ```bash
 factestio activate [mod_dir]
+factestio on [mod_dir]
 ```
 
 Flags:
@@ -153,10 +154,12 @@ Flags:
 | `-q, --quiet` | Suppress informational output |
 
 #### `deactivate`
-Restore the original mod-list state and remove factestio links.
+Restore the original mod-list state and remove factestio links. `off` is an
+alias for it.
 
 ```bash
 factestio deactivate [mod_dir]
+factestio off [mod_dir]
 ```
 
 Flags:
