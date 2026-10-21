@@ -9,9 +9,9 @@ description = {
   license = "MIT",
 }
 dependencies = {
-  "argparse >= 0.7.1",
+  "argparse >= 0.7.2",
   "lua >= 5.2, < 5.3",
-  "dkjson >= 2.8",
+  "dkjson >= 2.11",
   "serpent >= 0.30-2",
 }
 test_dependencies = {
