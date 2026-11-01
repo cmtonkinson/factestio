@@ -1,7 +1,15 @@
 local Constants = require("lib.constants")
+local FactorioPaths = require("lib.factorio_paths")
 local Shell = require("lib.shell")
+local System = require("lib.system")
 
 local Doctor = {}
+
+-- e.g. "Version: 2.1.24 (build 87808, mac-arm64, full)" -> "2.1.24"
+local function read_factorio_version(binary)
+  local output = Shell.capture(binary, { "--version" }, { stderr_to_devnull = true })
+  return output and output:match("Version:%s*(%d+%.%d+%.%d+)")
+end
 
 local function read_command_output(command_name)
   local output = Shell.command_path(command_name)
@@ -17,6 +25,9 @@ function Doctor.collect(opts)
   local getenv = opts.getenv or os.getenv
   local command_output = opts.command_output or read_command_output
   local require_fn = opts.require_fn or require
+  local detect = opts.detect or FactorioPaths.detect
+  local factorio_version = opts.factorio_version or read_factorio_version
+  local read_file = opts.read_file or System.read_file
   local checks = {}
 
   local function add(ok, label, detail)
@@ -51,6 +62,22 @@ function Doctor.collect(opts)
   for _, module_name in ipairs({ "argparse", "dkjson", "serpent" }) do
     local ok, loaded_or_err = pcall(require_fn, module_name)
     add(ok, string.format("require(%q)", module_name), ok and "ok" or tostring(loaded_or_err))
+  end
+
+  -- Factorio only loads a mod whose factorio_version equals the game's
+  -- major.minor, so a new Factorio release disables factestio until it is bumped.
+  local factorio = detect()
+  add(factorio.binary_ok, "Factorio binary found", tostring(factorio.binary))
+  if factorio.binary_ok then
+    local info = factestio_root
+      and read_file(System.ensure_trailing_slash(factestio_root) .. Constants.FACTESTIO.PROJECT_INFO_FILE_NAME)
+    local target = info and info:match('"factorio_version"%s*:%s*"([^"]+)"')
+    local installed = factorio_version(factorio.binary)
+    add(
+      target ~= nil and installed ~= nil and installed:match("^%d+%.%d+") == target,
+      "Factorio version matches factestio factorio_version " .. (target or "(unknown)"),
+      "installed " .. (installed or "unknown")
+    )
   end
 
   return checks

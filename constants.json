@@ -33,7 +33,8 @@
     "tmp_interrupt_file": "tmp/factestio.interrupt",
     "session_dir": ".factestio/session",
     "session_snapshot_file": "mod-list.json",
-    "session_meta_file": "meta.json"
+    "session_meta_file": "meta.json",
+    "session_links_file": "links.json"
   },
   "scheduler": {
     "run_tick_offset": 10,

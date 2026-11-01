@@ -47,6 +47,7 @@ local Constants = {
     SESSION_DIR = decoded.factestio.session_dir,
     SESSION_SNAPSHOT_FILE = decoded.factestio.session_snapshot_file,
     SESSION_META_FILE = decoded.factestio.session_meta_file,
+    SESSION_LINKS_FILE = decoded.factestio.session_links_file,
   },
   SCHEDULER = {
     RUN_TICK_OFFSET = decoded.scheduler.run_tick_offset,

@@ -9,6 +9,21 @@ local function find_check(checks, label)
   error("missing check: " .. label)
 end
 
+local function installed_factorio()
+  return { binary = "/bin/factorio", binary_ok = true }
+end
+
+local function missing_factorio()
+  return { binary = "/bin/factorio", binary_ok = false }
+end
+
+local function factestio_info(factorio_version)
+  return function(path)
+    assert.equal("/tmp/factestio/info.json", path)
+    return string.format('{ "name": "factestio", "factorio_version": "%s" }', factorio_version)
+  end
+end
+
 describe("Doctor.collect", function()
   it("reports a healthy Lua 5.2 runtime", function()
     local checks = Doctor.collect({
@@ -30,6 +45,11 @@ describe("Doctor.collect", function()
       require_fn = function(module_name)
         return { name = module_name }
       end,
+      detect = installed_factorio,
+      factorio_version = function()
+        return "2.1.24"
+      end,
+      read_file = factestio_info("2.1"),
     })
 
     assert.is_true(find_check(checks, "FACTESTIO_ROOT set").ok)
@@ -41,6 +61,31 @@ describe("Doctor.collect", function()
     assert.is_true(find_check(checks, 'require("argparse")').ok)
     assert.is_true(find_check(checks, 'require("dkjson")').ok)
     assert.is_true(find_check(checks, 'require("serpent")').ok)
+    assert.is_true(find_check(checks, "Factorio binary found").ok)
+    assert.is_true(find_check(checks, "Factorio version matches factestio factorio_version 2.1").ok)
+  end)
+
+  it("flags a Factorio release factestio does not target yet", function()
+    local checks = Doctor.collect({
+      getenv = function(name)
+        return name == "FACTESTIO_ROOT" and "/tmp/factestio" or nil
+      end,
+      command_output = function()
+        return nil
+      end,
+      require_fn = function(module_name)
+        return { name = module_name }
+      end,
+      detect = installed_factorio,
+      factorio_version = function()
+        return "2.2.0"
+      end,
+      read_file = factestio_info("2.1"),
+    })
+
+    local check = find_check(checks, "Factorio version matches factestio factorio_version 2.1")
+    assert.is_false(check.ok)
+    assert.equal("installed 2.2.0", check.detail)
   end)
 
   it("surfaces missing tooling and modules", function()
@@ -54,9 +99,11 @@ describe("Doctor.collect", function()
       require_fn = function(module_name)
         error("module missing: " .. module_name)
       end,
+      detect = missing_factorio,
     })
 
     assert.is_false(find_check(checks, "FACTESTIO_ROOT set").ok)
+    assert.is_false(find_check(checks, "Factorio binary found").ok)
     assert.is_false(find_check(checks, "lua on PATH").ok)
     assert.is_false(find_check(checks, "luarocks on PATH").ok)
     assert.is_false(find_check(checks, "LUA_PATH set").ok)
@@ -78,6 +125,7 @@ describe("Doctor.run", function()
       require_fn = function(module_name)
         error("module missing: " .. module_name)
       end,
+      detect = missing_factorio,
       emit = function(line, passed)
         table.insert(emitted, { line = line, passed = passed })
       end,

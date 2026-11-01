@@ -1,5 +1,7 @@
 local Constants = require("lib.constants")
+local Json = require("lib.factestio_json")
 local Shell = require("lib.shell")
+local System = require("lib.system")
 
 local ProjectLinks = {}
 
@@ -152,14 +154,72 @@ function ProjectLinks.remove_project_symlink(root, quiet)
   return remove_symlink(link_path, "Removed symlink: " .. link_path, quiet)
 end
 
+-- The baseline records what each mods/ link pointed at (or false: absent) before
+-- factestio first touched it this session, so deactivate can put back links it
+-- did not create. It lives in the mod-list session dir and is cleared with it.
+local function baseline_path(data_path)
+  return mods_dir(data_path) .. Constants.FACTESTIO.SESSION_DIR .. "/" .. Constants.FACTESTIO.SESSION_LINKS_FILE
+end
+
+local function read_baseline(data_path)
+  local path = baseline_path(data_path)
+  local content = System.read_file(path)
+  if not content then
+    return {}
+  end
+  local ok, decoded = pcall(Json.decode, content, path)
+  if not ok or type(decoded) ~= "table" then
+    return {}
+  end
+  return decoded
+end
+
+function ProjectLinks.record_baseline(data_path, mod_name)
+  local baseline = read_baseline(data_path)
+  for _, link_path in ipairs({ factestio_mod_link(data_path), sut_mod_link(data_path, mod_name) }) do
+    if baseline[link_path] == nil then
+      baseline[link_path] = Shell.readlink(link_path) or false
+    end
+  end
+
+  local path = baseline_path(data_path)
+  Shell.mkdir_p(mods_dir(data_path) .. Constants.FACTESTIO.SESSION_DIR)
+  if not System.write_file(path, Json.encode(baseline)) then
+    return nil, "Error: could not write symlink baseline at " .. path .. "\n"
+  end
+  return true
+end
+
+local function restore_baseline(data_path, link_path, quiet)
+  local target = read_baseline(data_path)[link_path]
+  if type(target) ~= "string" then
+    return true
+  end
+  if not Shell.ln_s(target, link_path) then
+    return nil, "Error: could not restore symlink: " .. link_path .. " -> " .. target .. "\n"
+  end
+  if not quiet then
+    print("Restored symlink: " .. link_path .. " -> " .. target)
+  end
+  return true
+end
+
 function ProjectLinks.remove_mod_symlink(data_path, quiet)
   local mods_link = factestio_mod_link(data_path)
-  return remove_symlink(mods_link, "Removed mod symlink: " .. mods_link, quiet)
+  local ok, err = remove_symlink(mods_link, "Removed mod symlink: " .. mods_link, quiet)
+  if not ok then
+    return nil, err
+  end
+  return restore_baseline(data_path, mods_link, quiet)
 end
 
 function ProjectLinks.remove_sut_symlink(data_path, mod_name, quiet)
   local mods_link = sut_mod_link(data_path, mod_name)
-  return remove_symlink(mods_link, "Removed SUT symlink: " .. mods_link, quiet)
+  local ok, err = remove_symlink(mods_link, "Removed SUT symlink: " .. mods_link, quiet)
+  if not ok then
+    return nil, err
+  end
+  return restore_baseline(data_path, mods_link, quiet)
 end
 
 return ProjectLinks

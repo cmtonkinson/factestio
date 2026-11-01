@@ -1,5 +1,6 @@
 return function(F)
   local Constants = require("lib.constants")
+  local FactorioLog = require("lib.factorio_log")
   local Shell = require("lib.shell")
   local System = require("lib.system")
   -- Since this code isn't running within Factorio, we can use whatever libraries
@@ -104,13 +105,44 @@ return function(F)
   end
 
   -----------------------------------------------------------------------------
+  local function read_text(path)
+    local f = io.open(path, "r")
+    if not f then
+      return nil
+    end
+    local content = f:read("*a")
+    f:close()
+    return content
+  end
+
+  -----------------------------------------------------------------------------
+  local function read_pid()
+    local content = read_text(F.PID_FILE)
+    local pid = content and content:gsub("%s+", "")
+    if pid == "" then
+      return nil
+    end
+    return pid
+  end
+
+  -----------------------------------------------------------------------------
+  local function done_file_exists()
+    local f = io.open(F.DONE_FILE, "r")
+    if f then
+      f:close()
+      return true
+    end
+    return false
+  end
+
+  -----------------------------------------------------------------------------
   function F.exec(node, depth)
     local d = depth or 0
     local indent = string.rep(" ", d * 2)
     local started_at = os.time()
     -- Do the thing.
     F.start_factorio(node)
-    if not node.data.timeout then
+    if not node.data.timeout and not node.data.exited then
       -- Check the results of the test.
       if not node.results_file then
         error("Error: missing results file for " .. node.data.name)
@@ -207,20 +239,29 @@ return function(F)
       error("Failed to launch Factorio process")
     end
 
-    -- Busywait for the scenario's DONE_FILE signal, with a timeout guard.
+    -- Busywait for the scenario's DONE_FILE signal, with a timeout guard. Stop
+    -- early if Factorio exits first: after a load error it never writes DONE_FILE.
+    local pid = read_pid()
     local done = false
+    local exited = false
     local timeout = os.time() + F.TEST_TIMEOUT
-    while not done and os.time() <= timeout do
-      local f = io.open(F.DONE_FILE, "r")
-      if f then
+    while not done and not exited and os.time() <= timeout do
+      if done_file_exists() then
         done = true
-        f:close()
+      elseif pid and not Shell.is_pid_alive(pid) then
+        exited = true
+        done = done_file_exists() -- it may have finished just before exiting
       else
         Shell.sleep(Constants.RUNTIME.POLL_INTERVAL_SECONDS)
       end
     end
 
-    if not done then
+    if exited and not done then
+      node.data.exited = true
+      node.data.status = "fail"
+      node.data.error = "Factorio exited before the test finished: "
+        .. (FactorioLog.first_error(read_text(F.TEST_STDOUT)) or "no error found in its log (see stdout.txt)")
+    elseif not done then
       node.data.timeout = true
       node.data.status = "fail"
       node.data.error = "scenario timeout after " .. F.TEST_TIMEOUT .. " seconds"
@@ -231,10 +272,7 @@ return function(F)
     end
 
     -- Kill the Factorio process using the saved PID file.
-    local pid_f = io.open(F.PID_FILE, "r")
-    if pid_f then
-      local pid = pid_f:read("*a"):gsub("%s+", "")
-      pid_f:close()
+    if pid then
       stop_factorio_process(pid)
       os.remove(F.PID_FILE)
       os.remove(F.ROOT .. Constants.FACTESTIO.TMP_PID_FILE)

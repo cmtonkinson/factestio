@@ -307,17 +307,20 @@ describe("local runner", function()
   local original_io_open
   local original_time
   local original_execute
+  local original_shell_module
 
   before_each(function()
     original_io_open = io.open
     original_time = os.time
     original_execute = os.execute
+    original_shell_module = package.loaded["lib.shell"]
   end)
 
   after_each(function()
     io.open = original_io_open -- luacheck: ignore
     os.time = original_time -- luacheck: ignore
     os.execute = original_execute -- luacheck: ignore
+    package.loaded["lib.shell"] = original_shell_module
   end)
 
   it("launches child scenarios without child save rewrites", function()
@@ -464,5 +467,127 @@ describe("local runner", function()
       pid_path = "/tmp/factestio.pid",
       root_pid_path = "/tmp/factestio/tmp/factestio.pid",
     }, shell_commands[2])
+  end)
+
+  -- A runner whose Factorio process is `alive()` and never writes DONE_FILE.
+  local function new_stalled_runner(alive, log)
+    local sleeps = 0
+    local now = 0
+    package.loaded["lib.shell"] = {
+      quote = function(value)
+        return "'" .. tostring(value) .. "'"
+      end,
+      is_pid_alive = alive,
+      sleep = function(seconds)
+        sleeps = sleeps + 1
+        now = now + seconds
+        return true
+      end,
+      kill = function()
+        return true
+      end,
+      launch_background = function()
+        return true
+      end,
+      test_exists = function()
+        return false
+      end,
+      mkdir_p = function()
+        return true
+      end,
+      rm_f = function()
+        return true
+      end,
+    }
+    local F = new_local_F()
+    F.FACTORIO_BINARY = "/bin/factorio"
+    F.FACTORIO_DATA_PATH = "/tmp/factorio/"
+    F.TEST_NAME_FILE = os.tmpname()
+    F.TEST_STDOUT = os.tmpname()
+    F.TEST_STDERR = "/tmp/stderr.log"
+    F.SETTINGS = "/tmp/server-settings.json"
+    F.PID_FILE = "/tmp/factestio.pid"
+    F.DONE_FILE = "/tmp/factestio.done"
+    F.SCRIPT_OUTPUT = "/tmp/script-output/"
+    F.RESULTS_ROOT = "factestio_results"
+    F.ROOT = "/tmp/factestio/"
+    F.TEST_TIMEOUT = 5
+
+    io.open = function(path, mode) -- luacheck: ignore
+      if path == F.DONE_FILE then
+        return nil
+      end
+      if path == F.PID_FILE then
+        return {
+          read = function()
+            return "123\n"
+          end,
+          close = function() end,
+        }
+      end
+      return original_io_open(path, mode)
+    end
+    os.time = function() -- luacheck: ignore
+      return now
+    end
+
+    -- launch_background is stubbed, so seed the log Factorio would have written.
+    local real_launch = package.loaded["lib.shell"].launch_background
+    package.loaded["lib.shell"].launch_background = function(...)
+      local f = original_io_open(F.TEST_STDOUT, "w")
+      f:write(log or "")
+      f:close()
+      return real_launch(...)
+    end
+
+    local node = {
+      name = "root",
+      data = { name = "root", stats = { failed = 0, assertions = 0 }, status = "pending" },
+      children = {},
+    }
+    return F, node, function()
+      return sleeps
+    end
+  end
+
+  it("fails fast with Factorio's own error when the process exits early", function()
+    local F, node, sleeps = new_stalled_runner(
+      function()
+        return false
+      end,
+      table.concat({
+        "   0.000 2026-11-01 08:10:18; Factorio 2.1.24 (build 87808, mac-arm64, full, space-age)",
+        '   0.258 Error Util.cpp:81: Failed to load mod "factestio": ',
+        "    • Incompatible Factorio version (current: 2.1, required: 2.0)",
+        "------------- Error -------------",
+        "   0.300 Goodbye",
+      }, "\n")
+    )
+
+    F.red = function() end -- the expected failure line would read like a real one
+    F.exec(node, 0)
+
+    assert.equal("fail", node.data.status)
+    assert.is_true(node.data.exited)
+    assert.is_nil(node.data.timeout)
+    assert.equal(
+      'Factorio exited before the test finished: Error Util.cpp:81: Failed to load mod "factestio": '
+        .. "• Incompatible Factorio version (current: 2.1, required: 2.0)",
+      node.data.error
+    )
+    assert.equal(0, sleeps())
+  end)
+
+  it("still reports a timeout while the process keeps running", function()
+    local F, node = new_stalled_runner(function()
+      return true
+    end)
+
+    F.red = function() end -- the expected failure line would read like a real one
+    F.exec(node, 0)
+
+    assert.equal("fail", node.data.status)
+    assert.is_true(node.data.timeout)
+    assert.equal("scenario timeout after 5 seconds", node.data.error)
   end)
 end)

@@ -1,4 +1,5 @@
 local Constants = require("lib.constants")
+local FactorioLog = require("lib.factorio_log")
 local FactorioPaths = require("lib.factorio_paths")
 local ModList = require("lib.mod_list")
 local ProjectConfig = require("lib.project_config")
@@ -110,6 +111,11 @@ function Command.run(root, mod_dir, quiet, keep_other_mods)
     return nil, err
   end
 
+  ok, err = ProjectLinks.record_baseline(detected_data, sut_name)
+  if not ok then
+    return nil, err
+  end
+
   ok, err = ProjectLinks.ensure_mod_symlink(root, detected_data, quiet)
   if not ok then
     return nil, err
@@ -163,6 +169,10 @@ function Command.run(root, mod_dir, quiet, keep_other_mods)
     end
   else
     io.stderr:write("Warning: Factorio --create failed to produce a save.\n")
+    local reason = FactorioLog.first_error(System.read_file(stdout_log))
+    if reason then
+      io.stderr:write(reason .. "\n")
+    end
     io.stderr:write("Check " .. stdout_log .. " for details.\n")
     io.stderr:write("You can retry with `factestio activate` after resolving the issue.\n")
   end
