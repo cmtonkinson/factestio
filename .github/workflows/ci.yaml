@@ -38,12 +38,22 @@ jobs:
       - name: Install Lua toolchain and dependencies
         run: make deps
 
-      - name: Verify
-        run: make verify
+      # Fail fast, same order as `make verify`: static checks before running
+      # any code, since a failure in one makes the next pointless.
+      - name: Format check
+        run: make format-check
+
+      - name: Lint
+        run: make lint
+
+      - name: Unit tests
+        run: make test
 
   # Runs factestio against a real headless Factorio; see scripts/smoke.sh.
-  # `make smoke` runs the same script locally, in a container.
+  # `make smoke` runs the same script locally, in a container. Last in the
+  # chain: it only starts once every check in `test` passes.
   smoke:
+    needs: test
     runs-on: ubuntu-latest
 
     steps:
