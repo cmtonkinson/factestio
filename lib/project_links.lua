@@ -92,17 +92,17 @@ function ProjectLinks.verify_mod_root(root, data_path)
 
   local expected_root = Shell.realpath(root:gsub("/$", ""))
   local actual_root = Shell.realpath(mods_target)
-  if expected_root and actual_root and expected_root ~= actual_root then
+  if not actual_root or (expected_root and expected_root ~= actual_root) then
     return nil,
       "Error: factestio CLI/mod mismatch detected.\n"
         .. "CLI root: "
-        .. expected_root
+        .. (expected_root or root)
         .. "\n"
         .. Constants.FACTESTIO.FACTORIO_MODS_DIR_NAME
         .. "/"
         .. Constants.FACTESTIO.FACTESTIO_MOD_NAME
         .. " -> "
-        .. actual_root
+        .. (actual_root or (mods_target .. " (missing)"))
         .. "\nRun `factestio activate` using the factestio binary you intend to use,"
         .. " or invoke the matching binary directly.\n"
   end

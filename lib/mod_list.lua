@@ -48,57 +48,53 @@ local function write_session_meta(data_path, active_mod_name, had_mod_list)
     return nil, "Error: could not create factestio session directory\n"
   end
 
-  if
-    not Shell.write_output(session_meta_path(data_path), "jq", {
-      "-n",
-      "--arg",
-      "active_mod_name",
-      active_mod_name,
-      "--argjson",
-      "had_mod_list",
-      had_mod_list and "true" or "false",
-      "{active_mod_name:$active_mod_name,had_mod_list:$had_mod_list}",
-    })
-  then
+  local meta = Json.encode({ active_mod_name = active_mod_name, had_mod_list = had_mod_list })
+  if not System.write_file(session_meta_path(data_path), meta) then
     return nil, "Error: could not write factestio session metadata\n"
   end
 
   return true
 end
 
-local function mod_enabled_named(data_path, mod_name)
-  local _, path = ModList.read(data_path)
-  if not path or not System.exists(path) then
-    return false
+local function read_mods(path)
+  local content = System.read_file(path)
+  if not content then
+    return nil
   end
-
-  return Shell.succeeds("jq", {
-    "-e",
-    "--arg",
-    "mod_name",
-    mod_name,
-    ".mods[]? | select(.name == $mod_name and .enabled == true)",
-    path,
-  }, {
-    stdout_path = "/dev/null",
-    stderr_to_devnull = true,
-  })
+  local ok, decoded = pcall(Json.decode, content, path)
+  if not ok or type(decoded) ~= "table" then
+    return nil
+  end
+  decoded.mods = decoded.mods or {}
+  return decoded
 end
 
-local function apply_filter(path, filter, args)
+local function write_mods(path, decoded)
   local tmp_path = path .. ".tmp"
-  local jq_args = {}
-  for _, arg in ipairs(args or {}) do
-    jq_args[#jq_args + 1] = arg
-  end
-  jq_args[#jq_args + 1] = filter
-  jq_args[#jq_args + 1] = path
-
-  if not Shell.write_output(tmp_path, "jq", jq_args) then
+  if not System.write_file(tmp_path, Json.encode(decoded)) then
     return false
   end
-
   return Shell.mv(tmp_path, path)
+end
+
+local function set_enabled(decoded, mod_name, enabled)
+  for _, mod in ipairs(decoded.mods) do
+    if mod.name == mod_name then
+      mod.enabled = enabled
+      return
+    end
+  end
+  decoded.mods[#decoded.mods + 1] = { name = mod_name, enabled = enabled }
+end
+
+local function mod_enabled_named(data_path, mod_name)
+  local decoded = read_mods(mod_list_path(data_path))
+  for _, mod in ipairs(decoded and decoded.mods or {}) do
+    if mod.name == mod_name and mod.enabled == true then
+      return true
+    end
+  end
+  return false
 end
 
 local function set_mod_enabled(data_path, mod_name, enabled)
@@ -107,22 +103,12 @@ local function set_mod_enabled(data_path, mod_name, enabled)
     return true
   end
 
-  local enabled_literal = enabled and "true" or "false"
-  local filter = string.format(
-    [[
-(.mods //= [])
-| if any(.mods[]?; .name == $mod_name)
-  then .mods |= map(if .name == $mod_name then .enabled = %s else . end)
-  else .mods += [{"name": $mod_name, "enabled": %s}] end
-]],
-    enabled_literal,
-    enabled_literal
-  )
-  if not apply_filter(path, filter, {
-    "--arg",
-    "mod_name",
-    mod_name,
-  }) then
+  local decoded = read_mods(path)
+  if not decoded then
+    return nil, "Error: could not update mod-list.json at " .. path .. "\n"
+  end
+  set_enabled(decoded, mod_name, enabled)
+  if not write_mods(path, decoded) then
     return nil, "Error: could not update mod-list.json at " .. path .. "\n"
   end
 
@@ -140,14 +126,18 @@ end
 function ModList.begin_session(data_path, active_mod_name)
   local meta = session_meta(data_path)
   if meta then
-    local snapshot_exists = System.exists(session_snapshot_path(data_path))
-    local active_session = mod_enabled_named(data_path, "factestio")
+    -- Keep the snapshot even if factestio was disabled since: it is the user's
+    -- real mod list, and the current file has their other mods turned off.
+    if meta.had_mod_list == true and System.exists(session_snapshot_path(data_path)) then
+      return write_session_meta(data_path, active_mod_name, true)
+    end
+
+    local active_session = meta.had_mod_list ~= true
+      and mod_enabled_named(data_path, "factestio")
       and meta.active_mod_name
       and mod_enabled_named(data_path, meta.active_mod_name)
-      and (meta.had_mod_list ~= true or snapshot_exists)
-
     if active_session then
-      return write_session_meta(data_path, active_mod_name, meta.had_mod_list == true)
+      return write_session_meta(data_path, active_mod_name, false)
     end
 
     Shell.rm_rf(session_dir(data_path))
@@ -179,41 +169,19 @@ function ModList.activate(data_path, sut_name, keep_other_mods, quiet)
     end
   end
 
-  local filter
-  if keep_other_mods then
-    filter = [[
-(.mods //= [])
-| def enable_mod($name):
-    if any(.mods[]?; .name == $name)
-    then .mods |= map(if .name == $name then .enabled = true else . end)
-    else .mods += [{"name": $name, "enabled": true}] end;
-  enable_mod("factestio")
-| enable_mod($sut_name)
-]]
-  else
-    filter = [[
-(.mods //= [])
-| def enable_mod($name):
-    if any(.mods[]?; .name == $name)
-    then .mods |= map(if .name == $name then .enabled = true else . end)
-    else .mods += [{"name": $name, "enabled": true}] end;
-  .mods |= map(
-    if (.name == "base" or .name == "factestio" or .name == $sut_name)
-    then .enabled = true
-    else .enabled = false
-    end
-  )
-| enable_mod("base")
-| enable_mod("factestio")
-| enable_mod($sut_name)
-]]
+  local decoded = read_mods(path)
+  if not decoded then
+    return nil, "Error: could not update mod-list.json at " .. path .. "\n"
   end
-
-  if not apply_filter(path, filter, {
-    "--arg",
-    "sut_name",
-    sut_name,
-  }) then
+  if not keep_other_mods then
+    for _, mod in ipairs(decoded.mods) do
+      mod.enabled = false
+    end
+    set_enabled(decoded, "base", true)
+  end
+  set_enabled(decoded, "factestio", true)
+  set_enabled(decoded, sut_name, true)
+  if not write_mods(path, decoded) then
     return nil, "Error: could not update mod-list.json at " .. path .. "\n"
   end
 

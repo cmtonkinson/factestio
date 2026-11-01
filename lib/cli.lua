@@ -81,6 +81,24 @@ function Cli.parse(argv)
   local i = 1
   while i <= #argv do
     local current = argv[i]
+    local inline_flag, inline_value = current:match("^(%-%-[%w-]+)=(.*)$")
+    if inline_flag then
+      current = inline_flag
+    end
+    -- Returns the flag's value from `--flag=value` or the next argument.
+    local function take_value()
+      local value = inline_value
+      inline_value = nil
+      if not inline_flag then
+        i = i + 1
+        value = argv[i]
+      end
+      if value == "" then
+        return nil
+      end
+      return value
+    end
+
     if current == "-h" or current == "--help" then
       return {
         action = "help",
@@ -103,34 +121,18 @@ function Cli.parse(argv)
       args.json = true
     elseif current == "--roots" then
       args.roots = true
-    elseif current == "--children" then
-      i = i + 1
-      local value = argv[i]
-      if not value then
-        return parse_error(nil, true)
-      end
-      args.children = value
     elseif current == "-q" or current == "--quiet" then
       args.quiet = true
     elseif current == "-d" or current == "--debug" then
       args.debug = true
-    elseif current == "--leaf" then
-      i = i + 1
-      local value = argv[i]
+    elseif current == "--children" or current == "--leaf" or current == "--branch" then
+      local value = take_value()
       if not value then
         return parse_error(nil, true)
       end
-      args.leaf = value
-    elseif current == "--branch" then
-      i = i + 1
-      local value = argv[i]
-      if not value then
-        return parse_error(nil, true)
-      end
-      args.branch = value
+      args[current:sub(3)] = value
     elseif current == "--seed" then
-      i = i + 1
-      local value = argv[i]
+      local value = take_value()
       if not value then
         return parse_error(nil, true)
       end
@@ -139,31 +141,14 @@ function Cli.parse(argv)
         return parse_error("Error: seed must be a number.\n", false)
       end
     elseif current == "-t" or current == "--timeout" then
-      i = i + 1
-      local value = argv[i]
+      local value = take_value()
       if not value then
         return parse_error(nil, true)
       end
       args.timeout = tonumber(value)
-      if not args.timeout then
-        return parse_error("Error: timeout must be a number.\n", false)
+      if not args.timeout or args.timeout <= 0 then
+        return parse_error("Error: timeout must be a positive number.\n", false)
       end
-    elseif current:match("^%-%-timeout=") then
-      args.timeout = tonumber(current:match("^%-%-timeout=(.+)$"))
-      if not args.timeout then
-        return parse_error("Error: timeout must be a number.\n", false)
-      end
-    elseif current:match("^%-%-seed=") then
-      args.seed = tonumber(current:match("^%-%-seed=(.+)$"))
-      if not args.seed then
-        return parse_error("Error: seed must be a number.\n", false)
-      end
-    elseif current:match("^%-%-children=") then
-      args.children = current:match("^%-%-children=(.+)$")
-    elseif current:match("^%-%-leaf=") then
-      args.leaf = current:match("^%-%-leaf=(.+)$")
-    elseif current:match("^%-%-branch=") then
-      args.branch = current:match("^%-%-branch=(.+)$")
     elseif current:sub(1, 1) == "-" then
       return parse_error(nil, true)
     else
@@ -171,6 +156,9 @@ function Cli.parse(argv)
         return parse_error(nil, true)
       end
       args.mod_dir = current
+    end
+    if inline_value then
+      return parse_error(nil, true)
     end
     i = i + 1
   end

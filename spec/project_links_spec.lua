@@ -23,6 +23,15 @@ describe("ProjectLinks baseline", function()
     Shell.rm_rf(base)
   end)
 
+  it("rejects a mods/factestio link whose target is gone", function()
+    assert(Shell.ln_s(base .. "missing", data_path .. "mods/factestio"))
+
+    local ok, err = ProjectLinks.verify_mod_root(base .. "factestio/", data_path)
+
+    assert.is_nil(ok)
+    assert.matches("factestio activate", err, 1, true)
+  end)
+
   it("restores a link that existed before activation and removes ones it created", function()
     local sut_link = data_path .. "mods/sut"
     local factestio_link = data_path .. "mods/factestio"

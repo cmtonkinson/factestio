@@ -115,8 +115,8 @@ function Shell.readlink(path)
 end
 
 function Shell.realpath(path)
-  local command = "cd " .. Shell.quote(path) .. " 2>/dev/null && pwd"
-  local output, succeeded = Shell.capture("sh", { "-lc", command })
+  local command = "cd " .. Shell.quote(path) .. " 2>/dev/null && pwd -P"
+  local output, succeeded = Shell.capture("sh", { "-c", command })
   output = output and output:gsub("\n$", "") or ""
   if not succeeded or output == "" then
     return nil
@@ -151,28 +151,8 @@ function Shell.kill(pid, signal)
   return Shell.succeeds("kill", { "-" .. signal, tostring(pid) }, { stderr_to_devnull = true })
 end
 
-function Shell.write_output(output_path, command, args, opts)
-  local redirection_opts = {}
-  for key, value in pairs(opts or {}) do
-    redirection_opts[key] = value
-  end
-  redirection_opts.stdout_path = output_path
-  local command_string = with_redirection(join_command(command, args), redirection_opts)
-  return execute_rendered(command_string)
-end
-
-function Shell.write_file(path, content)
-  local file, err = io.open(path, "w")
-  if not file then
-    return nil, err
-  end
-  file:write(content or "")
-  file:close()
-  return true
-end
-
 function Shell.command_path(name)
-  local output, succeeded = Shell.capture("sh", { "-lc", "command -v " .. Shell.quote(name) }, {
+  local output, succeeded = Shell.capture("sh", { "-c", "command -v " .. Shell.quote(name) }, {
     stderr_to_devnull = true,
   })
   output = output and output:gsub("^%s+", ""):gsub("%s+$", "") or ""

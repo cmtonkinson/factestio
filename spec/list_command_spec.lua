@@ -28,9 +28,6 @@ describe("ListCommand.run", function()
     fake.compile = function()
       return { root }
     end
-    fake.find_node = function(name)
-      return registry[name]
-    end
     fake.find_nodes_by_prefix = function(prefix)
       local matches = {}
       local dotted_prefix = prefix .. "."

@@ -15,6 +15,37 @@ describe("sandboxed helpers", function()
     _G.settings = original_settings
   end)
 
+  it("invoke fails a test whose failed expect() error was caught", function()
+    local F = new_sandboxed_F()
+    F.red = function() end
+    F.results_file = function()
+      return "results.json"
+    end
+    local written
+    local helpers = {
+      table_to_json = function(t)
+        written = t
+        return ""
+      end,
+      write_file = function() end,
+    }
+    local node = {
+      data = {
+        stats = { assertions = 0, passed = 0, failed = 0 },
+        test = function(f)
+          pcall(function()
+            f:expect(1, 2)
+          end)
+        end,
+      },
+    }
+
+    F:invoke(node, helpers, {}, nil, {})
+
+    assert.equal("fail", written.status)
+    assert.equal(1, written.stats.failed)
+  end)
+
   it("with_player_settings merges overrides for one player and restores settings", function()
     local F = new_sandboxed_F()
     local player = { index = 1 }

@@ -9,6 +9,20 @@ describe("Cli.parse", function()
     assert.equal("/tmp/mod/", parsed.mod_dir)
   end)
 
+  it("rejects a non-positive timeout", function()
+    assert.is_nil(Cli.parse({ "--timeout", "0" }))
+    assert.is_nil(Cli.parse({ "--timeout=-1" }))
+  end)
+
+  it("parses inline values and rejects them on plain flags", function()
+    local parsed = assert(Cli.parse({ "--seed=7", "-t", "3", "/tmp/mod" }))
+
+    assert.equal(7, parsed.seed)
+    assert.equal(3, parsed.timeout)
+    assert.is_nil(Cli.parse({ "--seed=" }))
+    assert.is_nil(Cli.parse({ "list", "--json=yes" }))
+  end)
+
   it("parses run seed", function()
     local parsed = assert(Cli.parse({ "--seed", "12345", "/tmp/mod" }))
 

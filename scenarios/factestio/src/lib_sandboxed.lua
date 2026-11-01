@@ -10,11 +10,12 @@ return function(F)
 
     -- Any error in before/test/after fails the whole test.
     local ok, err = pcall(F.execute_test, self)
-    if ok then
+    -- A caught expect() error still counts as a failure.
+    if ok and node.data.stats.failed == 0 then
       node.data.status = "pass"
     else
       node.data.status = "fail"
-      node.data.error = err
+      node.data.error = err or "an assertion failed"
     end
 
     -- The CLI reads this file after Factorio exits.

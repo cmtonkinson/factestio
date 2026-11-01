@@ -2,28 +2,6 @@ return function(F)
   local Constants = _G.script == nil and require("lib.constants") or require("test_constants")
   local Node = require(F.LOAD_PATH_PREFIX .. "src.node")
 
-  local function read_mod_name_from_info(mod_dir)
-    local info_path = mod_dir .. "info.json"
-    local f, read_err = io.open(info_path, "r")
-    if not f then
-      error("Error: could not read mod info from " .. info_path)
-    end
-
-    local content = f:read("*a")
-    f:close()
-
-    if not content then
-      error("Error: could not read mod info from " .. info_path .. ": " .. (read_err or "unknown error"))
-    end
-
-    local mod_name = content:match('"name"%s*:%s*"([^"]+)"')
-    if not mod_name then
-      error("Error: could not determine mod name from " .. info_path)
-    end
-
-    return mod_name
-  end
-
   local function write_lua_manifest(path, content)
     local f, err = io.open(path, "w")
     if not f then
@@ -119,7 +97,11 @@ return function(F)
     if _G.script == nil then
       file_names = F.discover_test_files()
       F.write_test_manifest(file_names)
-      F.write_test_context(read_mod_name_from_info(F.MOD_DIR))
+      local mod_name = require("lib.project_config").name(F.MOD_DIR)
+      if not mod_name then
+        error("Error: could not determine mod name from " .. F.MOD_DIR .. "info.json")
+      end
+      F.write_test_context(mod_name)
       F.write_test_seed(F.SEED)
       F.write_test_constants(Constants)
     else
@@ -307,11 +289,6 @@ return function(F)
       return a.data.name < b.data.name
     end)
     return matches
-  end
-
-  -----------------------------------------------------------------------------
-  function F.find_node(name)
-    return F.registry[name]
   end
 
   -----------------------------------------------------------------------------

@@ -32,17 +32,6 @@ describe("Shell", function()
     assert.equal("'cp' '/tmp/src file' '/tmp/dst file'", seen)
   end)
 
-  it("writes command output to a file path", function()
-    local seen
-    os.execute = function(cmd) -- luacheck: ignore
-      seen = cmd
-      return true
-    end
-
-    assert.is_true(Shell.write_output("/tmp/out.json", "jq", { "-n", "{x:1}" }))
-    assert.equal("'jq' '-n' '{x:1}' > '/tmp/out.json'", seen)
-  end)
-
   it("launches a background process via one helper", function()
     local seen
     os.execute = function(cmd) -- luacheck: ignore

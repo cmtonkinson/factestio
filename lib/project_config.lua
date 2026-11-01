@@ -3,32 +3,19 @@ local Json = require("lib.factestio_json")
 local System = require("lib.system")
 
 local ProjectConfig = {}
-local info_cache = {}
 
 local function info(mod_dir)
-  if info_cache[mod_dir] ~= nil then
-    return info_cache[mod_dir] or nil
-  end
-
   local info_path = mod_dir .. Constants.FACTESTIO.PROJECT_INFO_FILE_NAME
   local content = System.read_file(info_path)
   if not content then
-    info_cache[mod_dir] = false
     return nil
   end
 
   local ok, decoded = pcall(Json.decode, content, info_path)
   if not ok or type(decoded) ~= "table" then
-    info_cache[mod_dir] = false
     return nil
   end
-
-  info_cache[mod_dir] = decoded
   return decoded
-end
-
-function ProjectConfig.clear_cache()
-  info_cache = {}
 end
 
 function ProjectConfig.title(mod_dir)

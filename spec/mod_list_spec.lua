@@ -95,7 +95,7 @@ describe("ModList", function()
     Shell.rm_rf(data_path)
   end)
 
-  it("replaces stale session metadata with a fresh baseline", function()
+  it("keeps the original snapshot when factestio was disabled since activation", function()
     local data_path = temp_data_path()
     local mod_list_path = data_path .. "mods/mod-list.json"
     local session_dir = data_path .. "mods/.factestio/session"
@@ -139,8 +139,8 @@ describe("ModList", function()
       restored_mods[mod.name] = mod.enabled
     end
     assert.is_true(restored_mods.base)
-    assert.is_true(restored_mods.fresh)
-    assert.is_nil(restored_mods.stale)
+    assert.is_true(restored_mods.stale)
+    assert.is_nil(restored_mods.fresh)
 
     Shell.rm_rf(data_path)
   end)
