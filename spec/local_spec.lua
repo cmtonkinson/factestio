@@ -399,6 +399,7 @@ describe("local runner", function()
     F.RESULTS_ROOT = "factestio_results"
     F.ROOT = "/tmp/factestio/"
     F.TEST_TIMEOUT = 1
+    F.CLIENT_FLAGS = { "--disable-audio", "--nogamepad" }
 
     F.save_name = function()
       return "factestio_results/parent/factestio-parent.zip"

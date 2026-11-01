@@ -11,12 +11,19 @@ local function read_factorio_version(binary)
   return output and output:match("Version:%s*(%d+%.%d+%.%d+)")
 end
 
-local function read_command_output(command_name)
-  local output = Shell.command_path(command_name)
-  if not output or output == "" then
+-- A bare name is looked up on PATH; a full command line is run for its output.
+local function read_command_output(command)
+  local output
+  if command:find("%s") then
+    output = Shell.capture("sh", { "-c", command }, { stderr_to_devnull = true })
+  else
+    output = Shell.command_path(command)
+  end
+  output = (output or ""):gsub("^%s+", ""):gsub("%s+$", "")
+  if output == "" then
     return nil
   end
-  return (output or ""):gsub("^%s+", ""):gsub("%s+$", "")
+  return output
 end
 
 function Doctor.collect(opts)

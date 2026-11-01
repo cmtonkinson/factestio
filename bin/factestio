@@ -93,15 +93,13 @@ lua "$FACTESTIO_ROOT/lib/main.lua" "$@" &
 CHILD_PID=$!
 status=0
 while true; do
-  if wait "$CHILD_PID"; then
-    status=0
+  # `|| status=$?` keeps a nonzero exit from tripping `set -e`. (Reading $? after
+  # `if wait ...; fi` would always give 0, the status of the `if` itself.)
+  wait "$CHILD_PID" && status=0 || status=$?
+  # A trapped Ctrl+C interrupts `wait` while lua is still running; wait again.
+  if [[ "$status" -eq 0 ]] || ! kill -0 "$CHILD_PID" 2>/dev/null; then
     break
   fi
-  status=$?
-  if kill -0 "$CHILD_PID" 2>/dev/null; then
-    continue
-  fi
-  break
 done
 rm -f "$INTERRUPT_FILE"
 exit "$status"

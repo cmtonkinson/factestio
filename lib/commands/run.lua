@@ -1,4 +1,5 @@
 local Constants = require("lib.constants")
+local FactorioFlags = require("lib.factorio_flags")
 local ModList = require("lib.mod_list")
 local ProjectLinks = require("lib.project_links")
 local ProjectConfig = require("lib.project_config")
@@ -48,6 +49,7 @@ function Command.run(root, mod_dir, data_path, debug, timeout, seed, leaf, branc
 
   F.load()
   F.init(root)
+  F.CLIENT_FLAGS = FactorioFlags.client(F.FACTORIO_BINARY)
 
   local roots = F.compile()
   local mode = leaf and "leaf" or (branch and "branch" or nil)

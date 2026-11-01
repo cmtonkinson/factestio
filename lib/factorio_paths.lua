@@ -1,3 +1,4 @@
+local Shell = require("lib.shell")
 local System = require("lib.system")
 
 local FactorioPaths = {}
@@ -43,9 +44,10 @@ function FactorioPaths.detect(opts)
 
   local getenv = opts.getenv or os.getenv
   local exists = opts.exists or System.exists
+  -- `jit.os` only exists under LuaJIT; factestio runs on PUC Lua 5.2, so ask uname.
   local system_name = (opts.system_name or function()
-    local maybe_jit = rawget(_G, "jit")
-    return maybe_jit and maybe_jit.os or "Darwin"
+    local output = Shell.capture("uname", { "-s" }, { stderr_to_devnull = true })
+    return output and output:match("%S+") or "Darwin"
   end)()
 
   local home = getenv("HOME")

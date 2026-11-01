@@ -55,6 +55,8 @@ return function(F)
     -- Clean up results from the last run.
     Shell.rm_rf(results_dir)
     Shell.mkdir_p(results_dir)
+    -- The PID and log files live here, and a fresh Factorio install has none yet.
+    Shell.mkdir_p(F.SCRIPT_OUTPUT)
     os.remove(F.ROOT .. Constants.FACTESTIO.TMP_INTERRUPT_FILE)
     -- Kick off the root scenarios.
     F.start_time = os.time()
@@ -231,8 +233,9 @@ return function(F)
     System.write_file(F.TEST_STDERR, "")
     launch_args[#launch_args + 1] = "--server-settings"
     launch_args[#launch_args + 1] = F.SETTINGS
-    launch_args[#launch_args + 1] = "--disable-audio"
-    launch_args[#launch_args + 1] = "--nogamepad"
+    for _, flag in ipairs(F.CLIENT_FLAGS or {}) do
+      launch_args[#launch_args + 1] = flag
+    end
     local launch_ok =
       Shell.launch_background(launch_args, F.TEST_STDOUT, F.PID_FILE, F.ROOT .. Constants.FACTESTIO.TMP_PID_FILE)
     if not launch_ok then

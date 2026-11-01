@@ -1,4 +1,5 @@
 local Constants = require("lib.constants")
+local FactorioFlags = require("lib.factorio_flags")
 local FactorioLog = require("lib.factorio_log")
 local FactorioPaths = require("lib.factorio_paths")
 local ModList = require("lib.mod_list")
@@ -150,14 +151,11 @@ function Command.run(root, mod_dir, quiet, keep_other_mods)
   local stdout_log = root .. Constants.FACTESTIO.TMP_SETUP_STDOUT
   Shell.mkdir_p(root .. "tmp")
 
-  local create_ok = Shell.succeeds(guessed_binary, {
-    "--create",
-    tmp_save_base,
-    "--map-gen-settings",
-    map_gen,
-    "--disable-audio",
-    "--nogamepad",
-  }, {
+  local create_args = { "--create", tmp_save_base, "--map-gen-settings", map_gen }
+  for _, flag in ipairs(FactorioFlags.client(guessed_binary)) do
+    create_args[#create_args + 1] = flag
+  end
+  local create_ok = Shell.succeeds(guessed_binary, create_args, {
     stdout_path = stdout_log,
     stderr_to_stdout = true,
   })

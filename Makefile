@@ -1,4 +1,4 @@
-.PHONY: clean deps format format-check help lint major minor patch release test verify
+.PHONY: clean deps format format-check help lint major minor patch release smoke test verify
 
 ROCKSPEC := $(lastword $(sort $(wildcard *.rockspec)))
 LUA_VERSION := $(shell cat .lua-version)
@@ -39,6 +39,12 @@ test: ## Run unit tests
 	$(BUSTED) -o gtest
 
 verify: format-check lint test ## Run format-check, lint, and test
+
+# Headless Factorio is Linux x86-64 only, hence the amd64 container (emulated on
+# Apple silicon). --init lets Ctrl+C through; the script as PID 1 would ignore it.
+smoke: ## Run the example scenarios on real headless Factorio, in a Docker container
+	docker run --rm --init --platform linux/amd64 -v "$(CURDIR):/src:ro" \
+		ubuntu:24.04 /src/scripts/smoke.sh --container
 
 release: ## Cut a release: make release <major|minor|patch>
 	scripts/release.sh --$(word 2,$(MAKECMDGOALS))
