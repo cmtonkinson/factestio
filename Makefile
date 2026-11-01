@@ -1,4 +1,4 @@
-.PHONY: clean deps format format-check help lint test verify
+.PHONY: clean deps format format-check help lint major minor patch release test verify
 
 ROCKSPEC := $(lastword $(sort $(wildcard *.rockspec)))
 LUA_VERSION := $(shell cat .lua-version)
@@ -39,6 +39,13 @@ test: ## Run unit tests
 	$(BUSTED) -o gtest
 
 verify: format-check lint test ## Run format-check, lint, and test
+
+release: ## Cut a release: make release <major|minor|patch>
+	scripts/release.sh --$(word 2,$(MAKECMDGOALS))
+
+# Bump levels are positional arguments to `release`; on their own they do nothing.
+major minor patch:
+	@:
 
 help: ## Show available targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-13s %s\n", $$1, $$2}'
