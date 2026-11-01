@@ -5,7 +5,6 @@ return function(F)
   F.DEBUG = false
   F.TEST_TIMEOUT = Constants.RUNTIME.DEFAULT_TEST_TIMEOUT
 
-  -- These will be set at runtime.
   F.FACTORIO_BINARY = ""
   F.FACTORIO_DATA_PATH = ""
   F.RESULTS_ROOT = Constants.FACTESTIO.RESULTS_ROOT
@@ -32,14 +31,12 @@ return function(F)
   end
 
   function F.sandbox_init()
-    -- In the Factorio sandbox, helpers.write_file() writes relative to
-    -- script-output/ automatically. Use bare filenames here.
+    -- helpers.write_file() writes relative to script-output/, so use bare names.
     F.DONE_FILE = Constants.FACTESTIO.DONE_FILE_NAME
     F.TEST_STDOUT = Constants.FACTESTIO.STDOUT_FILE_NAME
     F.TEST_STDERR = Constants.FACTESTIO.STDERR_FILE_NAME
     F.PID_FILE = Constants.FACTESTIO.PID_FILE_NAME
     F.TEST_SEED_FILE = Constants.FACTESTIO.TEST_SEED_MANIFEST
-    -- results_file() is called per-node, so no static path needed here.
   end
 
   return F

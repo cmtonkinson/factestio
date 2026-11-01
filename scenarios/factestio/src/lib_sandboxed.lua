@@ -1,8 +1,6 @@
 return function(F)
   -----------------------------------------------------------------------------
   function F.invoke(self, node, helpers, game, player, event)
-    -- We bundle a bunch of stuff into a single table so that it's easy to pass
-    -- parameters down, and get metadata back up (via node.data)
     self.context = {
       game = game,
       player = player,
@@ -10,9 +8,7 @@ return function(F)
       node = node,
     }
 
-    -- We lump the before/test/after functions together in an isolated function
-    -- so that we can pcall THAT. This lets us fail the whole thing immediately
-    -- if anything raises an error.
+    -- Any error in before/test/after fails the whole test.
     local ok, err = pcall(F.execute_test, self)
     if ok then
       node.data.status = "pass"
@@ -21,7 +17,7 @@ return function(F)
       node.data.error = err
     end
 
-    -- Store the results where the outer script can find them.
+    -- The CLI reads this file after Factorio exits.
     local json = helpers.table_to_json({
       stats = node.data.stats,
       error = node.data.error,
@@ -34,8 +30,6 @@ return function(F)
   function F.execute_test(self)
     local data = self.context.node.data
 
-    -- Yes, passing both `self` and `self.context` is technically redundant.
-    -- Sue me.
     if data.before then
       local before_ok, before_err = pcall(function()
         data.before(self, self.context)

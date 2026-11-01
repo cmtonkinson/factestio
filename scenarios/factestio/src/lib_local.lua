@@ -3,8 +3,6 @@ return function(F)
   local FactorioLog = require("lib.factorio_log")
   local Shell = require("lib.shell")
   local System = require("lib.system")
-  -- Since this code isn't running within Factorio, we can use whatever libraries
-  -- and OS calls we want
   local io = require("io")
   local json = require("lib.factestio_json")
   local os = require("os")
@@ -52,13 +50,11 @@ return function(F)
   -----------------------------------------------------------------------------
   function F.run(roots)
     local results_dir = F.RESULTS_ROOT
-    -- Clean up results from the last run.
     Shell.rm_rf(results_dir)
     Shell.mkdir_p(results_dir)
     -- The PID and log files live here, and a fresh Factorio install has none yet.
     Shell.mkdir_p(F.SCRIPT_OUTPUT)
     os.remove(F.ROOT .. Constants.FACTESTIO.TMP_INTERRUPT_FILE)
-    -- Kick off the root scenarios.
     F.start_time = os.time()
     for _, root in ipairs(roots) do
       if F.interrupt_requested() then
@@ -142,10 +138,8 @@ return function(F)
     local d = depth or 0
     local indent = string.rep(" ", d * 2)
     local started_at = os.time()
-    -- Do the thing.
     F.start_factorio(node)
     if not node.data.timeout and not node.data.exited then
-      -- Check the results of the test.
       if not node.results_file then
         error("Error: missing results file for " .. node.data.name)
       end
@@ -159,7 +153,6 @@ return function(F)
       end
       file:close()
       local parsed = json.decode(content, node.results_file)
-      -- Overwrite the Node data with anything in the results file.
       for k, v in pairs(parsed) do
         node.data[k] = v
       end
@@ -175,8 +168,7 @@ return function(F)
       F.red(string.format("%s%s (failed: %s)", indent, node.name, node.data.error))
     end
 
-    -- Return if the test didn't pass. We assume children are invalid if the
-    -- parent falied.
+    -- Children start from the parent's save, so a failed parent invalidates them.
     if node.data.status ~= "pass" then
       if #node.children > 0 then
         F.red(indent .. "Skipping children of '" .. node.name .. "' due to failure.")
@@ -184,7 +176,6 @@ return function(F)
       return
     end
 
-    -- Recursively call the children (already sorted at compile time).
     for _, child in ipairs(node.children) do
       if F.interrupt_requested() then
         return
@@ -195,15 +186,11 @@ return function(F)
 
   -----------------------------------------------------------------------------
   function F.start_factorio(node)
-    -- Build the Factorio launch command.
-    -- Root tests (no parent): start a fresh world from the scenario on disk.
-    -- Child tests (has parent): restore the parent's saved world state from zip.
     local launch_args = {
       F.FACTORIO_BINARY,
     }
     if not node.parent then
-      -- Root test: write the test name to disk so control.lua can require() it,
-      -- then load the scenario fresh (on_init fires, brand-new world).
+      -- control.lua requires the test name file; on_init fires on a fresh world.
       local ok = System.write_file(F.TEST_NAME_FILE, string.format("return %q\n", node.data.name))
       if not ok then
         error("Failed to write test name file: " .. F.TEST_NAME_FILE)
@@ -211,9 +198,7 @@ return function(F)
       launch_args[#launch_args + 1] = "--start-server-load-scenario"
       launch_args[#launch_args + 1] = Constants.FACTESTIO.SCENARIO_LOAD_TARGET
     else
-      -- Child test: copy the parent's save, update the on-disk test manifest,
-      -- then load the child save directly (on_load fires, full world state —
-      -- entities, map, storage — is restored from the zip).
+      -- on_load fires and the full world state, storage included, comes from the zip.
       local parent_zip = F.save_name(node.parent)
       local child_zip = F.FACTORIO_DATA_PATH .. "saves/" .. Constants.FACTESTIO.CHILD_LOAD_BASENAME .. ".zip"
       local cp_ok = Shell.cp(parent_zip, child_zip)
@@ -228,7 +213,6 @@ return function(F)
       launch_args[#launch_args + 1] = Constants.FACTESTIO.CHILD_LOAD_BASENAME
     end
 
-    -- Start the headless server in the background. Redirect output to log files.
     System.write_file(F.TEST_STDOUT, "")
     System.write_file(F.TEST_STDERR, "")
     launch_args[#launch_args + 1] = "--server-settings"
@@ -274,14 +258,12 @@ return function(F)
       node.data.status = "pass"
     end
 
-    -- Kill the Factorio process using the saved PID file.
     if pid then
       stop_factorio_process(pid)
       os.remove(F.PID_FILE)
       os.remove(F.ROOT .. Constants.FACTESTIO.TMP_PID_FILE)
     end
 
-    -- Move artifacts into the per-test results subdirectory.
     local fqn = F.fully_qualified_name(node)
     local results_dir = F.RESULTS_ROOT .. "/" .. fqn .. "/"
     local save = F.FACTORIO_DATA_PATH .. "saves/factestio-" .. F.safe_save_name(node.data.name) .. ".zip"
@@ -296,7 +278,6 @@ return function(F)
       node.results_file = results_target
     end
 
-    -- Clean up transient files.
     Shell.rm_f(F.TEST_NAME_FILE)
     Shell.rm_f(F.DONE_FILE)
     Shell.rm_f(F.FACTORIO_DATA_PATH .. "saves/" .. Constants.FACTESTIO.CHILD_LOAD_BASENAME .. ".zip")

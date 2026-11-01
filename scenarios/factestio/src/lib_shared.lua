@@ -128,16 +128,13 @@ return function(F)
 
     for _, file_name in ipairs(file_names) do
       local scenarios_tbl = F.require_test_file(file_name)
-      -- Register with prefixed names, resolve from
       for name, config in pairs(scenarios_tbl) do
         local prefixed_name = file_name .. "." .. name
-        -- Resolve 'from': if it's a bare name (no dot), it's relative to this file
+        -- A bare `from` is relative to this file; a dotted one is already qualified.
         if config.from then
           if not config.from:find("%.") then
-            -- bare name — resolve to same file
             config.from = file_name .. "." .. config.from
           end
-          -- else: already qualified (e.g. 'other_file.setup') — leave as-is
         end
         F.register_scenario(prefixed_name, config)
       end
@@ -228,7 +225,6 @@ return function(F)
   function F.compile()
     local roots = {}
 
-    -- First pass: Generate nodes for all scenarios.
     for name, config in pairs(F.registry) do
       local d = {}
       d.name = name
@@ -244,11 +240,9 @@ return function(F)
         passed = 0,
         failed = 0,
       }
-      -- Replace the original registry configuration with the new Node.
       F.registry[name] = Node.new(name, d)
     end
 
-    -- Second pass: Link parent/child relationships.
     for name, node in pairs(F.registry) do
       local data = node.data
       if data.from then
@@ -262,14 +256,12 @@ return function(F)
       end
     end
 
-    -- Third pass: Sort children of every node for deterministic execution order.
     for _, node in pairs(F.registry) do
       table.sort(node.children, function(a, b)
         return a.data.name < b.data.name
       end)
     end
 
-    -- Third pass: detect cycles
     local function check_cycles(node, visited, path)
       if visited[node.data.name] then
         local cycle = {}
@@ -287,10 +279,8 @@ return function(F)
       visited[node.data.name] = nil
       table.remove(path)
     end
-    -- Note: cycle detection only covers root-reachable nodes. A group of nodes
-    -- that all have 'from' set (no roots among them) would form an orphaned
-    -- subgraph that is never reached here. Those nodes simply produce no roots
-    -- and are silently excluded from the run — they do not cause an error.
+    -- Only root-reachable cycles are detected. Nodes with no root ancestor
+    -- (e.g. a `from` loop) are silently excluded from the run, not an error.
     for _, root in ipairs(roots) do
       check_cycles(root, {}, {})
     end
@@ -299,7 +289,6 @@ return function(F)
       return a.data.name < b.data.name
     end)
 
-    -- Return DAG roots.
     return roots
   end
 

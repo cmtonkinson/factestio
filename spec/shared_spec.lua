@@ -301,29 +301,15 @@ describe("F.compile", function()
   end)
 
   it("errors on direct cycle (A -> A) injected into children", function()
-    -- Build a root, compile it, then manually inject a self-cycle and re-run cycle check.
-    -- We do this by calling compile's internal logic via a fresh registry with
-    -- a post-compile children manipulation. Since compile() does cycle detection
-    -- over children, we verify it via a helper that mimics check_cycles.
-    -- Instead, verify via the public API: a node whose 'from' points to itself
-    -- causes an error during the second pass (self-reference as parent).
+    -- A becomes its own parent and is never a root, so cycle detection skips it.
     F.registry["A"] = { test = function() end, from = "A" }
-    -- A.from = "A": in pass 2, parent = F.registry["A"] (the node A itself),
-    -- then parent:add(A) adds A as its own child. A is not a root so cycle check
-    -- won't run. This means no error is raised — but let's document the behavior.
-    -- Actually: parent:add(node) sets node.parent = self, so A.parent = A.
-    -- Then A is not inserted into roots. Cycle check iterates roots (empty) — no error.
-    -- The implementation does NOT detect self-referential cycles with no root.
     assert.has_no_error(function()
       F.compile()
     end)
   end)
 
   it("errors on indirect cycle (A -> B -> A) when reachable from a root", function()
-    -- Build root -> A -> B, then patch B's children to include A (simulating B -> A cycle).
-    -- compile() does not detect this because 'from' only goes parent->child direction.
-    -- Document: cycle detection works only when cycles are reachable from root nodes.
-    -- With root -> A (from="root") -> B (from="A"), tree is: root -> A -> B (no cycle).
+    -- A single `from` per node makes root -> A -> B a chain, not a cycle.
     F.registry["root"] = { test = function() end }
     F.registry["A"] = { test = function() end, from = "root" }
     F.registry["B"] = { test = function() end, from = "A" }

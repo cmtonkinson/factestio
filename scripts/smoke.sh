@@ -1,11 +1,8 @@
 #!/usr/bin/env bash
-# Drives a real headless Factorio through the example scenarios `activate`
-# scaffolds, covering what the specs mock: the scenario's tick scheduler, saves,
-# CLI flags, script-output paths. Headless Factorio is Linux x86-64 only.
-#
-# CI runs this directly on its runner. Locally, run `make smoke`, which runs it
-# with --container in a throwaway Linux container so your own Factorio install,
-# mod list and symlinks are never touched.
+# Runs the example scenarios `activate` scaffolds on real headless Factorio
+# (Linux x86-64 only), covering what the specs mock: the tick scheduler, saves,
+# CLI flags, script-output paths. CI runs it directly; locally use `make smoke`,
+# which runs it with --container so your own Factorio install is never touched.
 set -euo pipefail
 
 # Bump alongside info.json's factorio_version; the doctor step fails on a mismatch.

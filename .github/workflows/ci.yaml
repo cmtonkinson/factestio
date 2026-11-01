@@ -29,17 +29,15 @@ jobs:
       - name: Install hererocks
         run: pip install hererocks
 
-      # stylua gates syntax variants behind cargo features, and the default set
-      # omits lua52 -- without it stylua.toml's `syntax = "Lua52"` is rejected.
-      # Homebrew builds with --all-features, which is why this only bites in CI.
+      # The default cargo feature set omits lua52, which stylua.toml's
+      # `syntax = "Lua52"` requires.
       - name: Install stylua
         run: cargo install stylua --features lua52
 
       - name: Install Lua toolchain and dependencies
         run: make deps
 
-      # Fail fast, same order as `make verify`: static checks before running
-      # any code, since a failure in one makes the next pointless.
+      # Same order as `make verify`: static checks before running any code.
       - name: Format check
         run: make format-check
 
@@ -50,8 +48,6 @@ jobs:
         run: make test
 
   # Runs factestio against a real headless Factorio; see scripts/smoke.sh.
-  # `make smoke` runs the same script locally, in a container. Last in the
-  # chain: it only starts once every check in `test` passes.
   smoke:
     needs: test
     runs-on: ubuntu-latest
