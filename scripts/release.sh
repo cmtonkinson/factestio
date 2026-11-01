@@ -6,13 +6,14 @@ set -euo pipefail
 # tooling makes no such effort at this time.
 
 # Everything below uses repo-relative paths (info.json, the rockspec).
-cd "${0:A:h:h}"
+SCRIPT="$(basename "$0")"
+cd "$(dirname "$0")/.."
 
 HOMEBREW_TAP_DIR="${HOMEBREW_TAP_DIR:-$HOME/repo/homebrew-tap}"
 FORMULA="$HOMEBREW_TAP_DIR/Formula/factestio.rb"
 
 usage() {
-  echo "Usage: $0 [--use-last-commit] --patch|--minor|--major" >&2
+  echo "Usage: $SCRIPT [--use-last-commit] --patch|--minor|--major" >&2
   exit 1
 }
 

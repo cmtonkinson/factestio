@@ -5,6 +5,7 @@ factestio/*
 map.dat
 factestio_results/*
 root-save.zip
+scenarios/factestio/factestio
 scenarios/factestio/script-init.dat
 scenarios/factestio/script.dat
 scenarios/factestio/test_constants.lua
