@@ -14,9 +14,7 @@
     "scenario_project_link": "scenarios/factestio/factestio",
     "scenario_load_target": "factestio/factestio",
     "results_root": "factestio_results",
-    "root_save_name": "root-save.zip",
     "child_load_basename": "factestio-child-load",
-    "root_save_init_basename": "factestio-root-save-init",
     "done_file_name": "factestio.done",
     "stdout_file_name": "factestio.stdout",
     "stderr_file_name": "factestio.stderr",
@@ -29,7 +27,6 @@
     "server_settings_file": "server-settings.json",
     "map_gen_settings_file": "map-gen-settings.json",
     "tmp_pid_file": "tmp/factestio.pid",
-    "tmp_setup_stdout": "tmp/setup-stdout.txt",
     "tmp_interrupt_file": "tmp/factestio.interrupt",
     "session_dir": ".factestio/session",
     "session_snapshot_file": "mod-list.json",
@@ -43,6 +40,7 @@
   },
   "runtime": {
     "default_test_timeout": 8,
+    "default_map_radius": 20,
     "poll_interval_seconds": 0.1
   }
 }

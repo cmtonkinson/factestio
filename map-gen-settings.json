@@ -1,18 +1,8 @@
 {
-  "width": 128,
-  "height": 128,
-  "starting_area": "none",
-  "peaceful_mode": true,
-  "autoplace_controls": {
-    "coal": { "frequency": 1, "size": 0, "richness": 0 },
-    "stone": { "frequency": 1, "size": 0, "richness": 0 },
-    "copper-ore": { "frequency": 1, "size": 0, "richness": 0 },
-    "iron-ore": { "frequency": 1, "size": 0, "richness": 0 },
-    "uranium-ore": { "frequency": 1, "size": 0, "richness": 0 },
-    "crude-oil": { "frequency": 1, "size": 0, "richness": 0 },
-    "trees": { "frequency": 1, "size": 0, "richness": 0 },
-    "enemy-base": { "frequency": 1, "size": 0, "richness": 0 }
-  },
-  "terrain_segmentation": "very-low",
-  "water": "none"
+  "_comment": [
+    "The scenario discards this map and generates its own (scenarios/factestio/control.lua).",
+    "One chunk keeps the discarded map cheap to create."
+  ],
+  "width": 32,
+  "height": 32
 }

@@ -198,10 +198,11 @@ describe("F.safe_save_name", function()
 end)
 
 describe("F.discovered_test_files", function()
-  it("returns sorted module names for all non-config lua files", function()
+  it("returns sorted module names for all lua files but config and options", function()
     local paths = {
       "/tmp/factestio/zeta.lua",
       "/tmp/factestio/config.lua",
+      "/tmp/factestio/options.lua",
       "/tmp/factestio/alpha.lua",
       "/tmp/factestio/helpers.txt",
       "/tmp/factestio/beta.lua",
@@ -222,21 +223,6 @@ describe("F.save_name", function()
   it("sanitizes dots in node name for the zip filename", function()
     local node = Node.new("example.setup", { name = "example.setup" })
     assert.equal("factestio_results/example.setup/factestio-example-setup.zip", F.save_name(node))
-  end)
-end)
-
-describe("F.starting_save", function()
-  it("returns 'root-save.zip' for root node (no parent)", function()
-    local n = Node.new("root", { name = "root" })
-    assert.equal("root-save.zip", F.starting_save(n))
-  end)
-
-  it("returns parent's save_name for a child node", function()
-    local parent = Node.new("example", { name = "example" })
-    local child = Node.new("test", { name = "test" })
-    parent:add(child)
-    -- parent's save_name = "factestio_results/example/factestio-example.zip"
-    assert.equal(F.save_name(parent), F.starting_save(child))
   end)
 end)
 

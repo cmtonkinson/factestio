@@ -32,6 +32,11 @@ files["scenarios/factestio/factestio/*.lua"] = {
   },
   max_line_length = false,
 }
+files["scripts/smoke/*.lua"] = {
+  read_globals = {
+    "defines",
+  },
+}
 
 -- Ignore generated/result directories
 exclude_files = { "tmp/**", "results/**", ".luarocks/**", ".omx/**", ".omc/**", ".hererocks/**" }

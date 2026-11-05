@@ -126,9 +126,9 @@ factestio list [options] [mod_dir]
 | `--json` | Emit machine-readable JSON (combines with either mode) |
 
 ## Writing tests
-Every `factestio/*.lua` file except `config.lua` is discovered automatically
-and returns a table of named scenarios. Results of the latest run go to
-`factestio_results/` in the project root.
+Every `factestio/*.lua` file except `config.lua` and `options.lua` is
+discovered automatically and returns a table of named scenarios. Results of the
+latest run go to `factestio_results/` in the project root.
 
 ```lua
 -- factestio/my_tests.lua
@@ -165,14 +165,33 @@ return {
 Scenarios are registered as `<file>.<name>`. A bare `from` (`'setup'`) refers to
 the same file; a dotted one (`'other_file.setup'`) is absolute.
 
+### Starting world
+A root scenario starts on flat `grass-1` and nothing else: no water, cliffs,
+resources, enemies, trees, rocks, or decoratives. The land is a square that
+reaches `map_radius` chunks from the origin chunk in every direction. The
+default of 20 covers tiles -640 to 671 on both axes.
+
+Maybe don't build beyond the edge: `create_entity` still works, but since the
+ungenerated chunks have no tiles, player checks like `can_place_entity` fail
+Do not build beyond it. Ungenerated land has no tiles: `create_entity` still
+succeeds there, but player build checks (`can_place_entity` with a `manual` or
+`manual_ghost` `build_check_type`) fail and ghosts do not revive.
+
+To change the radius, commit a `factestio/options.lua`:
+```lua
+return {
+  map_radius = 40,
+}
+```
+
 ### Assertions
 ```lua
 f:expect(actual, expected)   -- assert actual == expected
 ```
 
 ### Player settings
-`f:with_player_settings` overrides runtime player settings for one callback:
-
+`f:with_player_settings` overrides runtime player settings for one callback
+(values can be raw or tables like `{ value = ... }`):
 ```lua
 f:with_player_settings(player, {
   ["my-mod-request-size-type"] = "items",
@@ -182,9 +201,6 @@ f:with_player_settings(player, {
   -- overrides here.
 end)
 ```
-
-Values may be raw or `{ value = ... }` tables. The original `settings` table is
-restored even if the callback raises.
 
 ### Context
 ```lua
@@ -196,20 +212,18 @@ context.node     -- the test node (metadata)
 
 ## How it works
 Each test runs in a fresh headless Factorio process:
-
 - **Root tests** (no `from`) launch with `--start-server-load-scenario`,
   generating a fresh world.
 - **Child tests** load the parent's save zip with `--start-server`, restoring
   the full world state.
 
-At tick +10 the test runs, at +20 the world is saved, at +30 the process
-signals completion. Saves and logs are collected under `factestio_results/`.
-A failed test skips its children.
+At tick +10 the test runs, at +20 the world is saved, at +30 the process signals
+completion. Saves and logs are collected under `factestio_results/`. A failed
+test skips its children.
 
 ## Sample project
 [cmtonkinson/paste-logistic-settings-continued] uses factestio. Sample output:
 ![factestio sample output](assets/plsc-factestio.png)
-
 
 [cmtonkinson/paste-logistic-settings-continued]:
 https://github.com/cmtonkinson/paste-logistic-settings-continued

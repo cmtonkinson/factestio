@@ -1,6 +1,4 @@
 local Constants = require("lib.constants")
-local FactorioFlags = require("lib.factorio_flags")
-local FactorioLog = require("lib.factorio_log")
 local FactorioPaths = require("lib.factorio_paths")
 local ModList = require("lib.mod_list")
 local ProjectConfig = require("lib.project_config")
@@ -130,49 +128,6 @@ function Command.run(root, mod_dir, quiet, keep_other_mods)
   ok, err = ProjectLinks.ensure_project_symlink(root, mod_dir, quiet)
   if not ok then
     return nil, err
-  end
-
-  local root_save = root .. Constants.FACTESTIO.ROOT_SAVE_NAME
-  if System.exists(root_save) then
-    if not quiet then
-      print(Constants.FACTESTIO.ROOT_SAVE_NAME .. " already exists")
-    end
-    return 0
-  end
-
-  if not quiet then
-    print("Generating " .. Constants.FACTESTIO.ROOT_SAVE_NAME .. " (this may take a moment)...")
-  end
-
-  local tmp_save_name = Constants.FACTESTIO.ROOT_SAVE_INIT_BASENAME
-  local tmp_save_base = detected_data .. "saves/" .. tmp_save_name
-  local tmp_save_path = tmp_save_base .. ".zip"
-  local map_gen = root .. Constants.FACTESTIO.MAP_GEN_SETTINGS_FILE
-  local stdout_log = root .. Constants.FACTESTIO.TMP_SETUP_STDOUT
-  Shell.mkdir_p(root .. "tmp")
-
-  local create_args = { "--create", tmp_save_base, "--map-gen-settings", map_gen }
-  for _, flag in ipairs(FactorioFlags.client(guessed_binary)) do
-    create_args[#create_args + 1] = flag
-  end
-  local create_ok = Shell.succeeds(guessed_binary, create_args, {
-    stdout_path = stdout_log,
-    stderr_to_stdout = true,
-  })
-
-  if create_ok and System.exists(tmp_save_path) then
-    Shell.mv(tmp_save_path, root_save)
-    if not quiet then
-      print("Created root-save.zip")
-    end
-  else
-    io.stderr:write("Warning: Factorio --create failed to produce a save.\n")
-    local reason = FactorioLog.first_error(System.read_file(stdout_log))
-    if reason then
-      io.stderr:write(reason .. "\n")
-    end
-    io.stderr:write("Check " .. stdout_log .. " for details.\n")
-    io.stderr:write("You can retry with `factestio activate` after resolving the issue.\n")
   end
 
   return 0

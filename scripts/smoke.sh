@@ -20,7 +20,7 @@ if [[ "${1:-}" == "--container" ]]; then
   /opt/hererocks/bin/pip install -q hererocks
   export PATH="/opt/hererocks/bin:$PATH" HEREROCKS=hererocks
   mkdir -p /work
-  tar -C "$PWD" --exclude=.hererocks --exclude=tmp --exclude=root-save.zip -cf - . | tar -C /work -xf -
+  tar -C "$PWD" --exclude=.hererocks --exclude=tmp -cf - . | tar -C /work -xf -
   exec /work/scripts/smoke.sh
 fi
 
@@ -46,6 +46,8 @@ mkdir -p "$mod"
 jq '{name: "factestio-smoke", version: "0.0.1", title: "factestio smoke", author: "factestio", factorio_version}' \
   info.json >"$mod/info.json"
 bin/factestio activate "$mod"
+# The scaffolded examples prove the setup; these assert the starting world.
+cp scripts/smoke/*.lua "$mod/factestio/"
 
 log="$(mktemp)"
 (cd "$mod" && "$root/bin/factestio") | tee "$log"

@@ -4,8 +4,9 @@
 -- Once you have real scenarios, replace the bodies below with your own logic or
 -- delete this file outright -- nothing depends on it.
 --
--- Every *.lua file in this directory except config.lua is discovered
--- automatically, so there is nothing to register when you add a scenario.
+-- Every *.lua file in this directory except config.lua and options.lua is
+-- discovered automatically, so there is nothing to register when you add a
+-- scenario.
 
 return {
   setup = {

@@ -27,9 +27,7 @@ local Constants = {
     SCENARIO_PROJECT_LINK = decoded.factestio.scenario_project_link,
     SCENARIO_LOAD_TARGET = decoded.factestio.scenario_load_target,
     RESULTS_ROOT = decoded.factestio.results_root,
-    ROOT_SAVE_NAME = decoded.factestio.root_save_name,
     CHILD_LOAD_BASENAME = decoded.factestio.child_load_basename,
-    ROOT_SAVE_INIT_BASENAME = decoded.factestio.root_save_init_basename,
     DONE_FILE_NAME = decoded.factestio.done_file_name,
     STDOUT_FILE_NAME = decoded.factestio.stdout_file_name,
     STDERR_FILE_NAME = decoded.factestio.stderr_file_name,
@@ -42,7 +40,6 @@ local Constants = {
     SERVER_SETTINGS_FILE = decoded.factestio.server_settings_file,
     MAP_GEN_SETTINGS_FILE = decoded.factestio.map_gen_settings_file,
     TMP_PID_FILE = decoded.factestio.tmp_pid_file,
-    TMP_SETUP_STDOUT = decoded.factestio.tmp_setup_stdout,
     TMP_INTERRUPT_FILE = decoded.factestio.tmp_interrupt_file,
     SESSION_DIR = decoded.factestio.session_dir,
     SESSION_SNAPSHOT_FILE = decoded.factestio.session_snapshot_file,
@@ -56,6 +53,7 @@ local Constants = {
   },
   RUNTIME = {
     DEFAULT_TEST_TIMEOUT = decoded.runtime.default_test_timeout,
+    DEFAULT_MAP_RADIUS = decoded.runtime.default_map_radius,
     POLL_INTERVAL_SECONDS = decoded.runtime.poll_interval_seconds,
   },
 }

@@ -18,6 +18,7 @@ return function(F)
     F.ROOT = root
     F.SCRIPT_OUTPUT = F.FACTORIO_DATA_PATH .. "script-output/"
     F.SETTINGS = F.ROOT .. Constants.FACTESTIO.SERVER_SETTINGS_FILE
+    F.MAP_GEN_SETTINGS = F.ROOT .. Constants.FACTESTIO.MAP_GEN_SETTINGS_FILE
     F.SAVES = F.ROOT .. "saves"
     F.TEST_NAME_FILE = F.ROOT .. "scenarios/factestio/" .. Constants.FACTESTIO.TEST_NAME_MANIFEST
     F.TEST_SEED_FILE = F.ROOT .. "scenarios/factestio/" .. Constants.FACTESTIO.TEST_SEED_MANIFEST

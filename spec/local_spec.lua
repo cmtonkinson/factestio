@@ -94,7 +94,7 @@ describe("local loader", function()
     assert.equal('return {\n  "alpha",\n  "beta",\n}\n', table.concat(writes))
   end)
 
-  it("writes the test context manifest with the mod name", function()
+  it("writes the test context manifest with the mod name and map radius", function()
     local F = new_local_F()
     F.TEST_CONTEXT_MANIFEST = "/tmp/test_context.lua"
 
@@ -110,9 +110,9 @@ describe("local loader", function()
       }
     end
 
-    F.write_test_context("demo-mod")
+    F.write_test_context("demo-mod", 12)
 
-    assert.equal('return {\n  mod_name = "demo-mod",\n}\n', table.concat(writes))
+    assert.equal('return {\n  mod_name = "demo-mod",\n  map_radius = 12,\n}\n', table.concat(writes))
   end)
 
   it("writes the test constants manifest as a Lua module", function()
@@ -198,6 +198,7 @@ describe("local loader", function()
 
     local manifest_written
     local context_written
+    local radius_written
     local constants_written
     local seed_written
     F.discover_test_files = function()
@@ -206,8 +207,9 @@ describe("local loader", function()
     F.write_test_manifest = function(file_names)
       manifest_written = file_names
     end
-    F.write_test_context = function(mod_name)
+    F.write_test_context = function(mod_name, map_radius)
       context_written = mod_name
+      radius_written = map_radius
     end
     F.write_test_constants = function(constants)
       constants_written = constants
@@ -221,6 +223,7 @@ describe("local loader", function()
 
     assert.same({ "alpha", "beta" }, manifest_written)
     assert.equal("tmp-mod", context_written)
+    assert.equal(require("lib.constants").RUNTIME.DEFAULT_MAP_RADIUS, radius_written)
     assert.equal(12345, seed_written)
     assert.equal("factestio.done", constants_written.FACTESTIO.DONE_FILE_NAME)
     assert.equal("/bin/factorio", F.FACTORIO_BINARY)
@@ -577,6 +580,8 @@ describe("local runner", function()
       node.data.error
     )
     assert.equal(0, sleeps())
+    assert.equal(1, node.data.stats.failed)
+    assert.equal(1, node.data.stats.assertions)
   end)
 
   it("still reports a timeout while the process keeps running", function()
@@ -590,5 +595,6 @@ describe("local runner", function()
     assert.equal("fail", node.data.status)
     assert.is_true(node.data.timeout)
     assert.equal("scenario timeout after 5 seconds", node.data.error)
+    assert.equal(1, node.data.stats.failed)
   end)
 end)

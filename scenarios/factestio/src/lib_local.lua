@@ -54,6 +54,8 @@ return function(F)
     Shell.mkdir_p(results_dir)
     -- The PID and log files live here, and a fresh Factorio install has none yet.
     Shell.mkdir_p(F.SCRIPT_OUTPUT)
+    -- Nor a saves directory, and server_save fails without one.
+    Shell.mkdir_p(F.FACTORIO_DATA_PATH .. "saves")
     os.remove(F.ROOT .. Constants.FACTESTIO.TMP_INTERRUPT_FILE)
     F.start_time = os.time()
     for _, root in ipairs(roots) do
@@ -165,6 +167,12 @@ return function(F)
       )
     else
       F.had_failures = true
+      -- An error, crash, or timeout fails a scenario without failing an
+      -- assertion; count it, or the summary reads "Failed: 0".
+      if node.data.stats.failed == 0 then
+        node.data.stats.failed = 1
+        node.data.stats.assertions = node.data.stats.assertions + 1
+      end
       F.red(string.format("%s%s (failed: %s)", indent, node.name, node.data.error))
     end
 
@@ -197,6 +205,8 @@ return function(F)
       end
       launch_args[#launch_args + 1] = "--start-server-load-scenario"
       launch_args[#launch_args + 1] = Constants.FACTESTIO.SCENARIO_LOAD_TARGET
+      launch_args[#launch_args + 1] = "--map-gen-settings"
+      launch_args[#launch_args + 1] = F.MAP_GEN_SETTINGS
     else
       -- on_load fires and the full world state, storage included, comes from the zip.
       local parent_zip = F.save_name(node.parent)

@@ -18,7 +18,7 @@ return function(F)
 
     for _, path in ipairs(paths) do
       local file_name = path:match("([^/]+)%.lua$")
-      if file_name and file_name ~= "config" then
+      if file_name and file_name ~= "config" and file_name ~= "options" then
         table.insert(file_names, file_name)
       end
     end
@@ -28,8 +28,11 @@ return function(F)
   end
 
   -----------------------------------------------------------------------------
-  function F.write_test_context(mod_name)
-    write_lua_manifest(F.TEST_CONTEXT_MANIFEST, string.format("return {\n  mod_name = %q,\n}\n", mod_name))
+  function F.write_test_context(mod_name, map_radius)
+    write_lua_manifest(
+      F.TEST_CONTEXT_MANIFEST,
+      string.format("return {\n  mod_name = %q,\n  map_radius = %d,\n}\n", mod_name, map_radius)
+    )
   end
 
   -----------------------------------------------------------------------------
@@ -97,11 +100,12 @@ return function(F)
     if _G.script == nil then
       file_names = F.discover_test_files()
       F.write_test_manifest(file_names)
-      local mod_name = require("lib.project_config").name(F.MOD_DIR)
+      local ProjectConfig = require("lib.project_config")
+      local mod_name = ProjectConfig.name(F.MOD_DIR)
       if not mod_name then
         error("Error: could not determine mod name from " .. F.MOD_DIR .. "info.json")
       end
-      F.write_test_context(mod_name)
+      F.write_test_context(mod_name, ProjectConfig.map_radius(F.MOD_DIR))
       F.write_test_seed(F.SEED)
       F.write_test_constants(Constants)
     else
@@ -192,15 +196,6 @@ return function(F)
       .. "/factestio-"
       .. F.safe_save_name(node.data.name)
       .. ".zip"
-  end
-
-  -----------------------------------------------------------------------------
-  function F.starting_save(node)
-    if node.parent then
-      return F.save_name(node.parent)
-    else
-      return Constants.FACTESTIO.ROOT_SAVE_NAME
-    end
   end
 
   -----------------------------------------------------------------------------
